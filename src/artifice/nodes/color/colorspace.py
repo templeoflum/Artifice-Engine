@@ -55,7 +55,7 @@ class ColorSpaceNode(Node):
         self.add_parameter(
             "target_space",
             param_type=ParameterType.ENUM,
-            default="YCbCr",
+            default="RGB",
             choices=list_colorspaces(),
             description="Target color space",
         )
