@@ -8,7 +8,7 @@
 
 A next-generation glitch art co-creative environment built on a node-based architecture for emergent complexity, semantic awareness, and generative processes.
 
-![Artifice Engine Screenshot](docs/images/screenshot-placeholder.png)
+![Artifice Engine Screenshot](docs/images/screenshot.png)
 
 ## Overview
 
