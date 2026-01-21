@@ -102,6 +102,7 @@ class MainWindow(QMainWindow):
         # Preview Panel (right dock)
         self._preview = PreviewPanel()
         self._preview_dock = QDockWidget("Preview", self)
+        self._preview_dock.setObjectName("PreviewDock")
         self._preview_dock.setWidget(self._preview)
         self._preview_dock.setAllowedAreas(
             Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea
@@ -111,6 +112,7 @@ class MainWindow(QMainWindow):
         # Inspector Panel (right dock, below preview)
         self._inspector = InspectorPanel()
         self._inspector_dock = QDockWidget("Inspector", self)
+        self._inspector_dock.setObjectName("InspectorDock")
         self._inspector_dock.setWidget(self._inspector)
         self._inspector_dock.setAllowedAreas(
             Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea
@@ -125,6 +127,7 @@ class MainWindow(QMainWindow):
         # Node Palette (left dock)
         self._palette = NodePalette()
         self._palette_dock = QDockWidget("Nodes", self)
+        self._palette_dock.setObjectName("NodesDock")
         self._palette_dock.setWidget(self._palette)
         self._palette_dock.setAllowedAreas(
             Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
@@ -262,6 +265,7 @@ class MainWindow(QMainWindow):
         """Set up toolbars."""
         # Main toolbar
         toolbar = QToolBar("Main", self)
+        toolbar.setObjectName("MainToolBar")
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
 
