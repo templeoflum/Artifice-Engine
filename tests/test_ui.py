@@ -67,9 +67,9 @@ def main_window(qapp, graph, undo_stack):
     """Create a MainWindow instance."""
     window = MainWindow()
     yield window
-    # Reset modified flag to avoid save dialog during cleanup
+    # Force close without save dialog by disconnecting closeEvent behavior
     window._modified = False
-    window.close()
+    window.deleteLater()
 
 
 @pytest.fixture
@@ -116,9 +116,9 @@ class TestUILaunch:
         QTest.qWait(100)
 
         assert window.isVisible()
-        # Reset modified flag to avoid save dialog during cleanup
+        # Force close without save dialog
         window._modified = False
-        window.close()
+        window.deleteLater()
 
     def test_main_window_components(self, main_window):
         """Test: MainWindow has expected components."""
