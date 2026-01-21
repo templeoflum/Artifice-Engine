@@ -18,7 +18,7 @@ from artifice.core.port import PortType
 from artifice.core.registry import register_node
 from artifice.nodes.io.loader import ImageLoaderNode
 from artifice.nodes.io.saver import ImageSaverNode
-from artifice.nodes.utility.passthrough import PassThroughNode
+from artifice.nodes.utility.passthrough import NullNode
 
 
 class TestGraphConnections:
@@ -27,8 +27,8 @@ class TestGraphConnections:
     def test_add_nodes(self):
         """Test adding nodes to graph."""
         graph = NodeGraph()
-        node1 = graph.add_node(PassThroughNode())
-        node2 = graph.add_node(PassThroughNode())
+        node1 = graph.add_node(NullNode())
+        node2 = graph.add_node(NullNode())
 
         assert len(graph.nodes) == 2
         assert node1.id in graph.nodes
@@ -38,7 +38,7 @@ class TestGraphConnections:
         """V1.3 - Test connecting nodes in graph."""
         graph = NodeGraph()
         loader = graph.add_node(ImageLoaderNode())
-        passthrough = graph.add_node(PassThroughNode())
+        passthrough = graph.add_node(NullNode())
 
         result = graph.connect(loader, "image", passthrough, "image")
 
@@ -52,8 +52,8 @@ class TestGraphConnections:
         """Test connecting multiple nodes in a chain."""
         graph = NodeGraph()
         loader = graph.add_node(ImageLoaderNode())
-        pass1 = graph.add_node(PassThroughNode())
-        pass2 = graph.add_node(PassThroughNode())
+        pass1 = graph.add_node(NullNode())
+        pass2 = graph.add_node(NullNode())
         saver = graph.add_node(ImageSaverNode())
 
         assert graph.connect(loader, "image", pass1, "image")
@@ -66,7 +66,7 @@ class TestGraphConnections:
         """Test connecting to non-existent port fails."""
         graph = NodeGraph()
         loader = graph.add_node(ImageLoaderNode())
-        passthrough = graph.add_node(PassThroughNode())
+        passthrough = graph.add_node(NullNode())
 
         result = graph.connect(loader, "nonexistent", passthrough, "image")
 
@@ -76,7 +76,7 @@ class TestGraphConnections:
         """Test disconnecting nodes."""
         graph = NodeGraph()
         loader = graph.add_node(ImageLoaderNode())
-        passthrough = graph.add_node(PassThroughNode())
+        passthrough = graph.add_node(NullNode())
 
         graph.connect(loader, "image", passthrough, "image")
         result = graph.disconnect(loader, "image", passthrough, "image")
@@ -88,7 +88,7 @@ class TestGraphConnections:
         """Test removing node disconnects all ports."""
         graph = NodeGraph()
         loader = graph.add_node(ImageLoaderNode())
-        passthrough = graph.add_node(PassThroughNode())
+        passthrough = graph.add_node(NullNode())
         saver = graph.add_node(ImageSaverNode())
 
         graph.connect(loader, "image", passthrough, "image")
@@ -102,9 +102,9 @@ class TestGraphConnections:
     def test_cycle_detection(self):
         """Test that cycles are prevented."""
         graph = NodeGraph()
-        node1 = graph.add_node(PassThroughNode())
-        node2 = graph.add_node(PassThroughNode())
-        node3 = graph.add_node(PassThroughNode())
+        node1 = graph.add_node(NullNode())
+        node2 = graph.add_node(NullNode())
+        node3 = graph.add_node(NullNode())
 
         # Create chain: node1 -> node2 -> node3
         graph.connect(node1, "image", node2, "image")
@@ -118,7 +118,7 @@ class TestGraphConnections:
     def test_self_loop_prevented(self):
         """Test that self-loops are prevented."""
         graph = NodeGraph()
-        node = graph.add_node(PassThroughNode())
+        node = graph.add_node(NullNode())
 
         result = graph.connect(node, "image", node, "image")
 
@@ -170,7 +170,7 @@ class TestGraphExecution:
         loader = graph.add_node(ImageLoaderNode())
         loader.set_parameter("path", str(sample_image_path))
 
-        passthrough = graph.add_node(PassThroughNode())
+        passthrough = graph.add_node(NullNode())
 
         output_path = temp_dir / "output.png"
         saver = graph.add_node(ImageSaverNode())
@@ -188,11 +188,11 @@ class TestGraphExecution:
         """Test executing only up to a specific node."""
         graph = NodeGraph()
 
-        node1 = graph.add_node(PassThroughNode())
+        node1 = graph.add_node(NullNode())
         node1.inputs["image"].default = sample_image_buffer
 
-        node2 = graph.add_node(PassThroughNode())
-        node3 = graph.add_node(PassThroughNode())
+        node2 = graph.add_node(NullNode())
+        node3 = graph.add_node(NullNode())
 
         graph.connect(node1, "image", node2, "image")
         graph.connect(node2, "image", node3, "image")
@@ -338,7 +338,7 @@ class TestGraphSerialization:
     def test_graph_file_is_valid_json(self, temp_dir):
         """Test that saved graph file is valid JSON."""
         graph = NodeGraph()
-        graph.add_node(PassThroughNode())
+        graph.add_node(NullNode())
 
         path = temp_dir / "test.artifice"
         graph.save(path)
@@ -391,8 +391,8 @@ class TestGraphUtilities:
     def test_clear(self):
         """Test clearing all nodes from graph."""
         graph = NodeGraph()
-        graph.add_node(PassThroughNode())
-        graph.add_node(PassThroughNode())
+        graph.add_node(NullNode())
+        graph.add_node(NullNode())
 
         graph.clear()
 
@@ -401,8 +401,8 @@ class TestGraphUtilities:
     def test_iteration(self):
         """Test iterating over graph in execution order."""
         graph = NodeGraph()
-        node1 = graph.add_node(PassThroughNode())
-        node2 = graph.add_node(PassThroughNode())
+        node1 = graph.add_node(NullNode())
+        node2 = graph.add_node(NullNode())
         graph.connect(node1, "image", node2, "image")
 
         nodes = list(graph)
@@ -414,8 +414,8 @@ class TestGraphUtilities:
     def test_contains(self):
         """Test checking if node is in graph."""
         graph = NodeGraph()
-        node = graph.add_node(PassThroughNode())
-        other = PassThroughNode()
+        node = graph.add_node(NullNode())
+        other = NullNode()
 
         assert node in graph
         assert node.id in graph

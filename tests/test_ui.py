@@ -159,7 +159,7 @@ class TestNodeCreation:
     def test_add_node_at_position(self, node_editor):
         """Test: Can add a node at specific position."""
         # Add a PassThrough node (a simple utility node)
-        node = node_editor.add_node_at_position("PassThroughNode", x=100, y=100)
+        node = node_editor.add_node_at_position("NullNode", x=100, y=100)
 
         if node is not None:
             assert len(node_editor.graph.nodes) == 1
@@ -168,7 +168,7 @@ class TestNodeCreation:
 
     def test_add_node_at_center(self, node_editor):
         """Test: Can add a node at view center."""
-        node = node_editor.add_node_at_center("PassThroughNode")
+        node = node_editor.add_node_at_center("NullNode")
 
         if node is not None:
             assert len(node_editor.graph.nodes) == 1
@@ -176,7 +176,7 @@ class TestNodeCreation:
 
     def test_node_widget_created(self, node_editor):
         """Test: NodeWidget is created for each node."""
-        node = node_editor.add_node_at_position("PassThroughNode", 200, 200)
+        node = node_editor.add_node_at_position("NullNode", 200, 200)
 
         if node is not None:
             widget = node_editor._node_widgets.get(node.id)
@@ -186,8 +186,8 @@ class TestNodeCreation:
 
     def test_multiple_nodes(self, node_editor):
         """Test: Can add multiple nodes."""
-        node1 = node_editor.add_node_at_position("PassThroughNode", 100, 100)
-        node2 = node_editor.add_node_at_position("PassThroughNode", 300, 100)
+        node1 = node_editor.add_node_at_position("NullNode", 100, 100)
+        node2 = node_editor.add_node_at_position("NullNode", 300, 100)
 
         if node1 is not None and node2 is not None:
             assert len(node_editor.graph.nodes) == 2
@@ -204,8 +204,8 @@ class TestNodeConnection:
     def test_programmatic_connection(self, node_editor):
         """Test: Can connect nodes programmatically."""
         # Add two nodes
-        node1 = node_editor.add_node_at_position("PassThroughNode", 100, 100)
-        node2 = node_editor.add_node_at_position("PassThroughNode", 300, 100)
+        node1 = node_editor.add_node_at_position("NullNode", 100, 100)
+        node2 = node_editor.add_node_at_position("NullNode", 300, 100)
 
         if node1 is not None and node2 is not None:
             # Connect them
@@ -217,8 +217,8 @@ class TestNodeConnection:
 
     def test_connection_item_created(self, node_editor):
         """Test: ConnectionItem is created for each connection."""
-        node1 = node_editor.add_node_at_position("PassThroughNode", 100, 100)
-        node2 = node_editor.add_node_at_position("PassThroughNode", 300, 100)
+        node1 = node_editor.add_node_at_position("NullNode", 100, 100)
+        node2 = node_editor.add_node_at_position("NullNode", 300, 100)
 
         if node1 is not None and node2 is not None:
             node_editor.connect(node1, "image", node2, "image")
@@ -229,7 +229,7 @@ class TestNodeConnection:
 
     def test_start_and_cancel_connection(self, node_editor):
         """Test: Can start and cancel a connection."""
-        node = node_editor.add_node_at_position("PassThroughNode", 100, 100)
+        node = node_editor.add_node_at_position("NullNode", 100, 100)
 
         if node is not None:
             widget = node_editor._node_widgets.get(node.id)
@@ -254,18 +254,18 @@ class TestParameterEditing:
 
     def test_inspector_select_node(self, inspector_panel):
         """Test: Inspector can select a node."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         inspector_panel.set_node(node)
 
         assert inspector_panel._node == node
 
     def test_inspector_clear_node(self, inspector_panel):
         """Test: Inspector can clear selection."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         inspector_panel.set_node(node)
         inspector_panel.set_node(None)
 
@@ -324,7 +324,7 @@ class TestSaveLoad:
             filepath = os.path.join(tmpdir, "test_project.artifice")
 
             # Add a node
-            main_window._node_editor.add_node_at_position("PassThroughNode", 100, 100)
+            main_window._node_editor.add_node_at_position("NullNode", 100, 100)
 
             # Save
             main_window.save_project(filepath)
@@ -337,7 +337,7 @@ class TestSaveLoad:
             filepath = os.path.join(tmpdir, "test_project.artifice")
 
             # Create and save a project
-            main_window._node_editor.add_node_at_position("PassThroughNode", 100, 100)
+            main_window._node_editor.add_node_at_position("NullNode", 100, 100)
             initial_count = len(main_window._node_editor.graph.nodes)
             main_window.save_project(filepath)
 
@@ -354,8 +354,8 @@ class TestSaveLoad:
     def test_new_project(self, main_window):
         """Test: New project clears graph."""
         # Add nodes
-        main_window._node_editor.add_node_at_position("PassThroughNode", 100, 100)
-        main_window._node_editor.add_node_at_position("PassThroughNode", 200, 200)
+        main_window._node_editor.add_node_at_position("NullNode", 100, 100)
+        main_window._node_editor.add_node_at_position("NullNode", 200, 200)
 
         assert len(main_window._node_editor.graph.nodes) > 0
 
@@ -374,9 +374,9 @@ class TestUndoRedo:
 
     def test_undo_stack_push(self, undo_stack, graph):
         """Test: Can push commands to undo stack."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         cmd = AddNodeCommand(graph, node, (0, 0))
         undo_stack.push(cmd)
 
@@ -386,9 +386,9 @@ class TestUndoRedo:
 
     def test_undo(self, undo_stack, graph):
         """Test: Undo works correctly."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         cmd = AddNodeCommand(graph, node, (0, 0))
         undo_stack.push(cmd)
 
@@ -403,9 +403,9 @@ class TestUndoRedo:
 
     def test_redo(self, undo_stack, graph):
         """Test: Redo works correctly."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         cmd = AddNodeCommand(graph, node, (0, 0))
         undo_stack.push(cmd)
         undo_stack.undo()
@@ -421,10 +421,10 @@ class TestUndoRedo:
 
     def test_undo_clears_redo_stack(self, undo_stack, graph):
         """Test: New command clears redo stack."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node1 = PassThroughNode()
-        node2 = PassThroughNode()
+        node1 = NullNode()
+        node2 = NullNode()
 
         undo_stack.push(AddNodeCommand(graph, node1, (0, 0)))
         undo_stack.undo()
@@ -439,10 +439,10 @@ class TestUndoRedo:
 
     def test_connect_command(self, undo_stack, graph):
         """Test: Connect command works."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node1 = PassThroughNode()
-        node2 = PassThroughNode()
+        node1 = NullNode()
+        node2 = NullNode()
         graph.add_node(node1)
         graph.add_node(node2)
 
@@ -457,10 +457,10 @@ class TestUndoRedo:
 
     def test_composite_command(self, undo_stack, graph):
         """Test: Composite command works."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node1 = PassThroughNode()
-        node2 = PassThroughNode()
+        node1 = NullNode()
+        node2 = NullNode()
 
         commands = [
             AddNodeCommand(graph, node1, (0, 0)),
@@ -486,9 +486,9 @@ class TestNodeWidget:
 
     def test_node_widget_creation(self, qapp):
         """Test: NodeWidget can be created."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         widget = NodeWidget(node)
 
         assert widget is not None
@@ -496,9 +496,9 @@ class TestNodeWidget:
 
     def test_node_widget_ports(self, qapp):
         """Test: NodeWidget has port widgets."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         widget = NodeWidget(node)
 
         # Should have ports for inputs and outputs
@@ -506,9 +506,9 @@ class TestNodeWidget:
 
     def test_port_widget_properties(self, qapp):
         """Test: PortWidget has correct properties."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         widget = NodeWidget(node)
 
         if widget._output_ports:
@@ -527,9 +527,9 @@ class TestConnectionItem:
 
     def test_temp_connection_creation(self, qapp):
         """Test: TempConnectionItem can be created."""
-        from artifice.nodes.utility.passthrough import PassThroughNode
+        from artifice.nodes.utility.passthrough import NullNode
 
-        node = PassThroughNode()
+        node = NullNode()
         widget = NodeWidget(node)
 
         if widget._output_ports:
@@ -638,8 +638,8 @@ class TestSelection:
 
     def test_select_all(self, node_editor):
         """Test: Select all works."""
-        node_editor.add_node_at_position("PassThroughNode", 100, 100)
-        node_editor.add_node_at_position("PassThroughNode", 200, 200)
+        node_editor.add_node_at_position("NullNode", 100, 100)
+        node_editor.add_node_at_position("NullNode", 200, 200)
 
         node_editor.select_all()
 
@@ -649,7 +649,7 @@ class TestSelection:
 
     def test_clear_selection(self, node_editor):
         """Test: Clear selection works."""
-        node_editor.add_node_at_position("PassThroughNode", 100, 100)
+        node_editor.add_node_at_position("NullNode", 100, 100)
         node_editor.select_all()
         node_editor.clear_selection()
 
@@ -666,7 +666,7 @@ class TestDelete:
 
     def test_delete_selection(self, node_editor):
         """Test: Delete selection works."""
-        node = node_editor.add_node_at_position("PassThroughNode", 100, 100)
+        node = node_editor.add_node_at_position("NullNode", 100, 100)
 
         if node is not None:
             widget = node_editor._node_widgets.get(node.id)
@@ -688,7 +688,7 @@ class TestMainWindowIntegration:
     def test_undo_redo_actions(self, main_window):
         """Test: Undo/redo actions work via main window."""
         # Add node
-        main_window._node_editor.add_node_at_position("PassThroughNode", 100, 100)
+        main_window._node_editor.add_node_at_position("NullNode", 100, 100)
 
         if len(main_window._node_editor.graph.nodes) > 0:
             assert len(main_window._node_editor.graph.nodes) == 1

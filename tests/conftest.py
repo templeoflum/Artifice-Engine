@@ -20,11 +20,11 @@ def clean_registry():
     # Re-register the built-in nodes
     from artifice.nodes.io.loader import ImageLoaderNode
     from artifice.nodes.io.saver import ImageSaverNode
-    from artifice.nodes.utility.passthrough import PassThroughNode
+    from artifice.nodes.utility.passthrough import NullNode
 
     NodeRegistry.register(ImageLoaderNode)
     NodeRegistry.register(ImageSaverNode)
-    NodeRegistry.register(PassThroughNode)
+    NodeRegistry.register(NullNode)
 
     yield
     NodeRegistry.clear()

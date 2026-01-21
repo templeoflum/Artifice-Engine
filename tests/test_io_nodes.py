@@ -14,7 +14,7 @@ from artifice.core.data_types import ColorSpace, ImageBuffer
 from artifice.core.graph import NodeGraph
 from artifice.nodes.io.loader import ImageLoaderNode
 from artifice.nodes.io.saver import ImageSaverNode
-from artifice.nodes.utility.passthrough import PassThroughNode
+from artifice.nodes.utility.passthrough import NullNode
 
 
 class TestImageLoaderNode:
@@ -245,7 +245,7 @@ class TestIOPipelineIntegration:
         loader = graph.add_node(ImageLoaderNode())
         loader.set_parameter("path", str(sample_image_path))
 
-        passthrough = graph.add_node(PassThroughNode())
+        passthrough = graph.add_node(NullNode())
 
         output_path = temp_dir / "output.png"
         saver = graph.add_node(ImageSaverNode())

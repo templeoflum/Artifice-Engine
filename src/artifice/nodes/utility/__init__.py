@@ -1,7 +1,11 @@
 """Utility nodes."""
 
-from artifice.nodes.utility.passthrough import PassThroughNode
+from artifice.nodes.utility.passthrough import NullNode
+
+# Backwards compatibility alias
+PassThroughNode = NullNode
 
 __all__ = [
-    "PassThroughNode",
+    "NullNode",
+    "PassThroughNode",  # Deprecated alias
 ]

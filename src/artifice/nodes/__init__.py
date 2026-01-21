@@ -6,11 +6,15 @@ This package contains all built-in nodes organized by category.
 
 from artifice.nodes.generator import TestCardNode
 from artifice.nodes.io import ImageLoaderNode, ImageSaverNode
-from artifice.nodes.utility import PassThroughNode
+from artifice.nodes.utility import NullNode
+
+# Backwards compatibility alias
+PassThroughNode = NullNode
 
 __all__ = [
     "ImageLoaderNode",
     "ImageSaverNode",
-    "PassThroughNode",
+    "NullNode",
+    "PassThroughNode",  # Deprecated alias
     "TestCardNode",
 ]

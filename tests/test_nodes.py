@@ -13,17 +13,17 @@ from artifice.core.port import PortType
 from artifice.core.registry import NodeRegistry, register_node
 from artifice.nodes.io.loader import ImageLoaderNode
 from artifice.nodes.io.saver import ImageSaverNode
-from artifice.nodes.utility.passthrough import PassThroughNode
+from artifice.nodes.utility.passthrough import NullNode
 
 
 class TestNodeCreation:
     """Tests for basic node creation."""
 
-    def test_passthrough_node_creation(self):
+    def test_null_node_creation(self):
         """V1.1 - Test creating a node with typed ports."""
-        node = PassThroughNode()
+        node = NullNode()
 
-        assert node.name == "Pass Through"
+        assert node.name == "Null"
         assert "image" in node.inputs
         assert "image" in node.outputs
         assert node.inputs["image"].port_type == PortType.IMAGE
@@ -48,14 +48,14 @@ class TestNodeCreation:
 
     def test_node_unique_ids(self):
         """Test that each node gets a unique ID."""
-        node1 = PassThroughNode()
-        node2 = PassThroughNode()
+        node1 = NullNode()
+        node2 = NullNode()
 
         assert node1.id != node2.id
 
     def test_node_position(self):
         """Test node position attribute."""
-        node = PassThroughNode()
+        node = NullNode()
 
         assert node.position == (0.0, 0.0)
 
@@ -106,7 +106,7 @@ class TestNodeParameters:
 
     def test_parameter_marks_dirty(self):
         """Test that changing parameter marks node dirty."""
-        node = PassThroughNode()
+        node = NullNode()
         node._dirty = False
 
         node.add_parameter("test", param_type=ParameterType.FLOAT, default=1.0)
@@ -120,7 +120,7 @@ class TestNodeExecution:
 
     def test_can_execute_missing_required(self):
         """Test can_execute with missing required input."""
-        node = PassThroughNode()
+        node = NullNode()
 
         can_exec, reason = node.can_execute()
 
@@ -129,7 +129,7 @@ class TestNodeExecution:
 
     def test_can_execute_with_connection(self, sample_image_buffer):
         """Test can_execute with connected input."""
-        node = PassThroughNode()
+        node = NullNode()
 
         # Simulate connection with value
         node.inputs["image"].default = sample_image_buffer
@@ -139,7 +139,7 @@ class TestNodeExecution:
 
     def test_execute_success(self, sample_image_buffer):
         """Test successful execution."""
-        node = PassThroughNode()
+        node = NullNode()
         node.inputs["image"].default = sample_image_buffer
 
         result = node.execute()
@@ -150,7 +150,7 @@ class TestNodeExecution:
 
     def test_execute_failure(self):
         """Test execution failure."""
-        node = PassThroughNode()
+        node = NullNode()
         # No input connected
 
         result = node.execute()
@@ -162,8 +162,8 @@ class TestNodeExecution:
         """Test that marking dirty propagates to downstream nodes."""
         from artifice.core.port import connect
 
-        node1 = PassThroughNode()
-        node2 = PassThroughNode()
+        node1 = NullNode()
+        node2 = NullNode()
 
         connect(node1.outputs["image"], node2.inputs["image"])
 
@@ -210,14 +210,14 @@ class TestNodeRegistry:
         """Test that nodes are registered."""
         assert NodeRegistry.get("ImageLoaderNode") is not None
         assert NodeRegistry.get("ImageSaverNode") is not None
-        assert NodeRegistry.get("PassThroughNode") is not None
+        assert NodeRegistry.get("NullNode") is not None
 
     def test_create_node(self):
         """Test creating node through registry."""
-        node = NodeRegistry.create("PassThroughNode")
+        node = NodeRegistry.create("NullNode")
 
         assert node is not None
-        assert isinstance(node, PassThroughNode)
+        assert isinstance(node, NullNode)
 
     def test_get_categories(self):
         """Test getting nodes by category."""

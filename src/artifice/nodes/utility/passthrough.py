@@ -1,5 +1,5 @@
 """
-Pass-through node.
+Null node.
 
 Simple utility node that passes input directly to output.
 Useful for testing and as a connection point.
@@ -12,7 +12,7 @@ from artifice.core.registry import register_node
 
 
 @register_node
-class PassThroughNode(Node):
+class NullNode(Node):
     """
     Pass input image directly to output without modification.
 
@@ -22,7 +22,7 @@ class PassThroughNode(Node):
     - Debugging data flow
     """
 
-    name = "Pass Through"
+    name = "Null"
     category = "Utility"
     description = "Pass image through without modification"
     icon = "arrow-right"

@@ -65,6 +65,9 @@ class MainWindow(QMainWindow):
         # Load settings
         self._load_settings()
 
+        # Create default startup graph
+        self._create_default_graph()
+
     @property
     def graph(self) -> NodeGraph:
         """Get the node graph."""
@@ -240,7 +243,7 @@ class MainWindow(QMainWindow):
         graph_menu = menubar.addMenu("&Graph")
 
         self._action_execute = QAction("&Execute", self)
-        self._action_execute.setShortcut(QKeySequence("F5"))
+        self._action_execute.setShortcut(QKeySequence("Shift+E"))
         self._action_execute.triggered.connect(self.execute_graph)
         graph_menu.addAction(self._action_execute)
 
@@ -575,3 +578,19 @@ class MainWindow(QMainWindow):
             "A node-based glitch art tool.\n\n"
             "Converse with Chaos, Sculpt Emergence.",
         )
+
+    def _create_default_graph(self) -> None:
+        """Create the default startup graph with Test Card → Color Space."""
+        # Add Test Card node on the left
+        test_card = self._node_editor.add_node_at_position("TestCardNode", -150, 0)
+
+        # Add Color Space node on the right
+        color_space = self._node_editor.add_node_at_position("ColorSpaceNode", 150, 0)
+
+        # Connect them: Test Card "image" output → Color Space "image" input
+        if test_card and color_space:
+            self._node_editor.connect(test_card, "image", color_space, "image")
+
+        # Reset modified state since this is the initial state
+        self._modified = False
+        self._update_title()

@@ -107,8 +107,8 @@ def register_all_nodes():
     NodeRegistry.register(GLICDecodeNode)
 
     # Utility nodes
-    from artifice.nodes.utility.passthrough import PassThroughNode
-    NodeRegistry.register(PassThroughNode)
+    from artifice.nodes.utility.passthrough import NullNode
+    NodeRegistry.register(NullNode)
 
 
 def main():
