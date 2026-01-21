@@ -19,7 +19,8 @@ Artifice evolves beyond traditional glitch tools (like GLIC) into a unified plat
 - ✅ Context menus for disconnect/delete operations
 - ✅ File browser dialogs for image loading/saving
 - ✅ Real-time preview of processed images
-- ✅ Multiple node families: I/O, Color, Segmentation, Prediction, Quantization, Transform, Corruption
+- ✅ Multiple node families: I/O, Generator, Color, Segmentation, Prediction, Quantization, Transform, Corruption
+- ✅ Procedural test card generator for calibration and effect visualization
 
 ### Planned Features
 - ⏳ Video/temporal processing
@@ -49,28 +50,40 @@ Artifice evolves beyond traditional glitch tools (like GLIC) into a unified plat
 - **ImageLoaderNode** - Load images with file browser (PNG, JPG, TIFF, WebP, BMP, GIF). Defaults to user's Pictures directory.
 - **ImageSaverNode** - Save processed images with format selection. Defaults to project `output/` folder.
 
-### 2. Color Processing (`nodes/color/`)
+### 2. Generator Nodes (`nodes/generator/`)
+- **TestCardNode** - Procedural test card generator for calibration and effect visualization:
+  - Color bars (RGBCMYWK) - test color/channel operations
+  - Checkerboard patterns (8x8 and 16x16) - test frequency/DCT/FFT effects
+  - Diagonal lines - test directional operations (pixel sort, wavelets)
+  - Zone plate (concentric sine rings) - test frequency response/aliasing
+  - Step wedge (discrete gray levels) - test quantization level merging
+  - Radial gradient - test smooth gradients and circular operations
+  - Perlin noise - test segmentation and texture effects
+  - Rainbow hue sweep - test color space conversions
+  - Grayscale gradient - test tonal response
+
+### 3. Color Processing (`nodes/color/`)
 - **ColorSpaceNode** - Convert between RGB, HSV, LAB, XYZ, YCbCr, LUV, YIQ
 - **ChannelSplitNode** - Separate image into individual channels
 - **ChannelMergeNode** - Combine channels back into image
 - **ChannelSwapNode** - Reorder/swap color channels
 
-### 3. Segmentation (`nodes/segmentation/`)
+### 4. Segmentation (`nodes/segmentation/`)
 - **QuadtreeSegmentNode** - Adaptive image segmentation with multiple criteria:
   - Variance, edge detection, gradient magnitude
   - Configurable threshold, max depth, min block size
 
-### 4. Prediction (`nodes/prediction/`)
+### 5. Prediction (`nodes/prediction/`)
 - **PredictNode** - GLIC-style predictors for residual generation:
   - Horizontal, Vertical, DC (mean), Paeth, Average, Gradient
   - Works with quadtree regions for adaptive prediction
 
-### 5. Quantization (`nodes/quantization/`)
+### 6. Quantization (`nodes/quantization/`)
 - **QuantizeNode** - Reduce precision with multiple modes:
   - Uniform, adaptive, per-channel quantization
   - Configurable levels (2-256)
 
-### 6. Transform (`nodes/transform/`)
+### 7. Transform (`nodes/transform/`)
 - **DCTNode** - Discrete Cosine Transform (block-based or full image)
 - **FFTNode** - Fast Fourier Transform with frequency manipulation
 - **WaveletNode** - Multi-level wavelet decomposition (Haar, Daubechies, etc.)
@@ -79,15 +92,15 @@ Artifice evolves beyond traditional glitch tools (like GLIC) into a unified plat
   - Horizontal, vertical, or diagonal sorting
   - Threshold-based region selection
 
-### 7. Data Corruption (`nodes/corruption/`)
+### 8. Data Corruption (`nodes/corruption/`)
 - **BitShiftNode** / **BitFlipNode** - Bit-level manipulation
 - **ByteSwapNode** / **ByteShiftNode** - Byte-level corruption
 - **DataRepeaterNode** / **DataDropperNode** - Structural data manipulation
 
-### 8. Utility (`nodes/utility/`)
+### 9. Utility (`nodes/utility/`)
 - **PassThroughNode** - Pass data unchanged (debugging)
 
-### 9. Pipeline (`nodes/pipeline/`)
+### 10. Pipeline (`nodes/pipeline/`)
 - **GLICPipelineNode** - Combined GLIC processing in single node
 
 ## Planned Node Families
@@ -118,6 +131,7 @@ Artifice/
 │   │   └── data_types.py  # Shared data types
 │   ├── nodes/             # Node implementations by family
 │   │   ├── io/            # ImageLoaderNode, ImageSaverNode
+│   │   ├── generator/     # TestCardNode (procedural image generation)
 │   │   ├── color/         # ColorSpaceNode, Channel operations
 │   │   ├── segmentation/  # QuadtreeSegmentNode
 │   │   ├── prediction/    # PredictNode, predictors
