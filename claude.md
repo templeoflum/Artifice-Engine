@@ -46,8 +46,8 @@ Artifice Engine evolves beyond traditional glitch tools (like GLIC) into a unifi
 ## Implemented Node Families
 
 ### 1. Input/Output Nodes (`nodes/io/`)
-- **ImageLoaderNode** - Load images with file browser (PNG, JPG, TIFF, WebP, BMP, GIF)
-- **ImageSaverNode** - Save processed images with format selection
+- **ImageLoaderNode** - Load images with file browser (PNG, JPG, TIFF, WebP, BMP, GIF). Defaults to user's Pictures directory.
+- **ImageSaverNode** - Save processed images with format selection. Defaults to project `output/` folder.
 
 ### 2. Color Processing (`nodes/color/`)
 - **ColorSpaceNode** - Convert between RGB, HSV, LAB, XYZ, YCbCr, LUV, YIQ
@@ -108,6 +108,7 @@ Artifice Engine evolves beyond traditional glitch tools (like GLIC) into a unifi
 ### Code Organization
 ```
 Artifice-Engine/
+├── output/                # Default output directory for saved images
 ├── src/artifice/
 │   ├── core/              # Node system, graph, ports, registry
 │   │   ├── node.py        # Base Node class, Parameter, ParameterType
@@ -187,9 +188,15 @@ class MyNode(Node):
 - `ParameterType.BOOL` - Checkbox
 - `ParameterType.STRING` - Text field
 - `ParameterType.ENUM` - Dropdown with choices
-- `ParameterType.FILEPATH` - File browser button
+- `ParameterType.FILEPATH` - File browser button (supports `file_filter`, `is_save_path`, `default_directory`)
 - `ParameterType.COLOR` - Color picker (planned)
 - `ParameterType.CURVE` - Curve editor (planned)
+
+### FILEPATH Parameter Options
+When using `ParameterType.FILEPATH`, these additional options are available:
+- `file_filter` - Qt file filter string (e.g., `"Images (*.png *.jpg);;All Files (*)"`)
+- `is_save_path` - If `True`, shows save dialog; if `False`, shows open dialog
+- `default_directory` - Default directory when file browser opens (if no path is set)
 
 ## UI/UX Features
 
