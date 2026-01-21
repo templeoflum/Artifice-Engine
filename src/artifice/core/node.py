@@ -50,6 +50,8 @@ class Parameter:
         description: Human-readable description
         ui_hidden: Whether to hide in UI
         on_change: Callback when value changes
+        file_filter: File filter string for FILEPATH type (e.g., "Images (*.png *.jpg)")
+        is_save_path: If True, show save dialog; if False, show open dialog (for FILEPATH)
     """
 
     name: str
@@ -63,6 +65,8 @@ class Parameter:
     description: str = ""
     ui_hidden: bool = False
     on_change: Callable[[Any], None] | None = field(default=None, repr=False)
+    file_filter: str | None = None
+    is_save_path: bool = False
 
     def __post_init__(self) -> None:
         """Initialize value from default if not set."""
@@ -129,6 +133,8 @@ class Parameter:
             "step": self.step,
             "choices": self.choices,
             "description": self.description,
+            "file_filter": self.file_filter,
+            "is_save_path": self.is_save_path,
         }
 
     @classmethod
@@ -145,6 +151,8 @@ class Parameter:
             step=data.get("step"),
             choices=data.get("choices"),
             description=data.get("description", ""),
+            file_filter=data.get("file_filter"),
+            is_save_path=data.get("is_save_path", False),
         )
 
 
@@ -308,6 +316,8 @@ class Node(metaclass=NodeMeta):
         choices: list[str] | None = None,
         description: str = "",
         ui_hidden: bool = False,
+        file_filter: str | None = None,
+        is_save_path: bool = False,
     ) -> Parameter:
         """
         Add a parameter to this node.
@@ -322,6 +332,8 @@ class Node(metaclass=NodeMeta):
             choices: Valid choices (for ENUM)
             description: Human-readable description
             ui_hidden: Hide from UI
+            file_filter: File filter for FILEPATH type (e.g., "Images (*.png *.jpg)")
+            is_save_path: For FILEPATH, True = save dialog, False = open dialog
 
         Returns:
             The created Parameter
@@ -337,6 +349,8 @@ class Node(metaclass=NodeMeta):
             description=description,
             ui_hidden=ui_hidden,
             on_change=lambda _: self.mark_dirty(),
+            file_filter=file_filter,
+            is_save_path=is_save_path,
         )
         self.parameters[name] = param
         return param

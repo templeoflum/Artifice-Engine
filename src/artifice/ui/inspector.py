@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
     QFrame,
     QGroupBox,
     QSizePolicy,
+    QPushButton,
+    QFileDialog,
 )
 
 if TYPE_CHECKING:
@@ -271,6 +273,67 @@ class StringParameterWidget(ParameterWidget):
         return self._edit.text()
 
 
+class FilePathParameterWidget(ParameterWidget):
+    """Widget for file path parameters with browse button."""
+
+    def _setup_ui(self) -> None:
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Label
+        label = QLabel(self._name.replace("_", " ").title())
+        label.setFixedWidth(100)
+        layout.addWidget(label)
+
+        # Line edit
+        self._edit = QLineEdit()
+        self._edit.setPlaceholderText("Select a file...")
+        self._edit.editingFinished.connect(self._on_changed)
+        layout.addWidget(self._edit, 1)
+
+        # Browse button
+        self._browse_btn = QPushButton("Browse...")
+        self._browse_btn.setFixedWidth(70)
+        self._browse_btn.clicked.connect(self._on_browse)
+        layout.addWidget(self._browse_btn)
+
+        # Determine if this is for saving or loading
+        self._is_save_path = self._param_info.get("is_save_path", False)
+        self._file_filter = self._param_info.get("file_filter", "All Files (*)")
+
+    def _on_browse(self) -> None:
+        """Open file dialog to select a path."""
+        if self._is_save_path:
+            path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Select Output File",
+                self._edit.text(),
+                self._file_filter,
+            )
+        else:
+            path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select Input File",
+                self._edit.text(),
+                self._file_filter,
+            )
+
+        if path:
+            self._edit.setText(path)
+            self.value_changed.emit(self._name, path)
+
+    def _on_changed(self) -> None:
+        self.value_changed.emit(self._name, self._edit.text())
+
+    def set_value(self, value: str) -> None:
+        self._edit.blockSignals(True)
+        self._edit.setText(str(value))
+        self._edit.blockSignals(False)
+
+    def get_value(self) -> str:
+        return self._edit.text()
+
+
 class InspectorPanel(QWidget):
     """
     Panel for inspecting and editing node parameters.
@@ -367,6 +430,8 @@ class InspectorPanel(QWidget):
             "max_value": getattr(param, "max_value", None),
             "step": getattr(param, "step", None),
             "choices": getattr(param, "choices", None),
+            "file_filter": getattr(param, "file_filter", None),
+            "is_save_path": getattr(param, "is_save_path", False),
         }
 
         param_type = param.param_type.name if hasattr(param.param_type, "name") else str(param.param_type)
@@ -379,6 +444,8 @@ class InspectorPanel(QWidget):
             return BoolParameterWidget(name, param_info)
         elif param_type == "ENUM":
             return EnumParameterWidget(name, param_info)
+        elif param_type == "FILEPATH":
+            return FilePathParameterWidget(name, param_info)
         elif param_type == "STRING" or param_type == "PATH":
             return StringParameterWidget(name, param_info)
         else:

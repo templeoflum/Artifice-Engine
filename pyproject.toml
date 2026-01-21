@@ -28,6 +28,8 @@ dependencies = [
     "opencv-python>=4.8.0",
     "pillow>=10.0.0",
     "pywavelets>=1.4.0",
+    "scipy>=1.10.0",
+    "PySide6>=6.5.0",
 ]
 
 [project.optional-dependencies]
@@ -62,12 +64,12 @@ all = [
 ]
 
 [project.scripts]
-artifice = "artifice.ui.main:main"
+artifice = "artifice.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/artifice-engine/artifice-engine"
-Documentation = "https://artifice-engine.readthedocs.io"
-Repository = "https://github.com/artifice-engine/artifice-engine"
+Homepage = "https://github.com/templeoflum/Artifice-Engine"
+Repository = "https://github.com/templeoflum/Artifice-Engine"
+Issues = "https://github.com/templeoflum/Artifice-Engine/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

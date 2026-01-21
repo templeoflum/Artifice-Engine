@@ -26,11 +26,12 @@ from PySide6.QtWidgets import (
     QGraphicsScene,
     QApplication,
     QGraphicsRectItem,
+    QMenu,
 )
 
 from artifice.core.graph import NodeGraph
 from artifice.core.registry import get_registry
-from artifice.ui.node_widget import NodeWidget
+from artifice.ui.node_widget import NodeWidget, PortWidget
 from artifice.ui.connection import ConnectionItem, TempConnectionItem
 from artifice.ui.undo import (
     UndoStack,
@@ -44,7 +45,6 @@ from artifice.ui.undo import (
 
 if TYPE_CHECKING:
     from artifice.core.node import Node
-    from artifice.ui.node_widget import PortWidget
 
 
 class NodeEditorScene(QGraphicsScene):
@@ -330,9 +330,49 @@ class NodeEditorWidget(QGraphicsView):
 
     def start_connection(self, port: PortWidget) -> None:
         """Start drawing a connection from a port."""
+        # If clicking on a connected input port, disconnect and reconnect from source
+        if port.is_input and port.is_connected:
+            # Find and remove the existing connection
+            for conn in list(self._connection_items):
+                if conn.target_port == port:
+                    source_port = conn.source_port
+                    self.delete_connection(conn)
+                    # Start a new connection from the source
+                    self._source_port = source_port
+                    self._temp_connection = TempConnectionItem(source_port)
+                    self._scene.addItem(self._temp_connection)
+                    self._highlight_compatible_ports(source_port)
+                    return
+
         self._source_port = port
         self._temp_connection = TempConnectionItem(port)
         self._scene.addItem(self._temp_connection)
+        self._highlight_compatible_ports(port)
+
+    def _highlight_compatible_ports(self, source_port: PortWidget) -> None:
+        """Highlight ports that can accept a connection from the source."""
+        for widget in self._node_widgets.values():
+            # Check input ports if source is output, and vice versa
+            if source_port.is_input:
+                ports_to_check = widget._output_ports.values()
+            else:
+                ports_to_check = widget._input_ports.values()
+
+            for port in ports_to_check:
+                # Don't highlight ports on the same node
+                if port.node == source_port.node:
+                    continue
+                # Check type compatibility (same type or ANY)
+                if port.port_type == source_port.port_type or port.port_type == "ANY" or source_port.port_type == "ANY":
+                    port.is_compatible_target = True
+
+    def _clear_port_highlights(self) -> None:
+        """Clear all port compatibility highlights."""
+        for widget in self._node_widgets.values():
+            for port in widget._input_ports.values():
+                port.is_compatible_target = False
+            for port in widget._output_ports.values():
+                port.is_compatible_target = False
 
     def update_temp_connection(self, pos: QPointF) -> None:
         """Update temporary connection endpoint."""
@@ -385,6 +425,7 @@ class NodeEditorWidget(QGraphicsView):
         self._connection_items.append(item)
 
         self._source_port = None
+        self._clear_port_highlights()
         self.graph_modified.emit()
         return True
 
@@ -394,6 +435,81 @@ class NodeEditorWidget(QGraphicsView):
             self._scene.removeItem(self._temp_connection)
             self._temp_connection = None
         self._source_port = None
+        self._clear_port_highlights()
+
+    def delete_connection(self, conn_item: ConnectionItem) -> None:
+        """Delete a specific connection."""
+        source_port = conn_item.source_port
+        target_port = conn_item.target_port
+
+        # Disconnect in the graph
+        self._graph.disconnect(
+            source_port.node,
+            source_port.port_name,
+            target_port.node,
+            target_port.port_name,
+        )
+
+        # Update port visual state
+        source_port.is_connected = self._port_has_connections(source_port)
+        target_port.is_connected = self._port_has_connections(target_port)
+
+        # Remove visual connection
+        self._scene.removeItem(conn_item)
+        self._connection_items.remove(conn_item)
+
+        self.graph_modified.emit()
+
+    def delete_selected_connections(self) -> None:
+        """Delete all selected connections."""
+        for conn in list(self._connection_items):
+            if conn.isSelected():
+                self.delete_connection(conn)
+
+    def disconnect_port(self, port: PortWidget) -> None:
+        """Disconnect all connections from a port."""
+        connections_to_remove = []
+
+        for conn in self._connection_items:
+            if conn.source_port == port or conn.target_port == port:
+                connections_to_remove.append(conn)
+
+        for conn in connections_to_remove:
+            self.delete_connection(conn)
+
+    def _port_has_connections(self, port: PortWidget) -> bool:
+        """Check if a port still has any connections."""
+        for conn in self._connection_items:
+            if conn.source_port == port or conn.target_port == port:
+                return True
+        return False
+
+    def duplicate_node(self, node: Node) -> Node | None:
+        """Duplicate a node."""
+        # Get the node class
+        registry = get_registry()
+        node_class = registry.get(node.__class__.__name__)
+        if not node_class:
+            return None
+
+        # Create a new node at offset position
+        new_node = node_class()
+        new_pos = (node.position[0] + 50, node.position[1] + 50)
+        new_node.position = new_pos
+
+        # Copy parameter values
+        for name, param in node.parameters.items():
+            if name in new_node.parameters:
+                new_node.parameters[name].set(param.value)
+
+        # Add to graph
+        self._graph.add_node(new_node)
+
+        # Create widget
+        self._create_node_widget(new_node)
+
+        self.graph_modified.emit()
+        return new_node
 
     def connect(
         self,
@@ -593,6 +709,9 @@ class NodeEditorWidget(QGraphicsView):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle key press."""
         if event.key() == Qt.Key.Key_Delete or event.key() == Qt.Key.Key_Backspace:
+            # Delete selected connections first
+            self.delete_selected_connections()
+            # Then delete selected nodes
             self.delete_selection()
         elif event.key() == Qt.Key.Key_Escape:
             self.cancel_connection()
@@ -600,8 +719,65 @@ class NodeEditorWidget(QGraphicsView):
         else:
             super().keyPressEvent(event)
 
+    def contextMenuEvent(self, event) -> None:
+        """Handle right-click context menu."""
+        pos = event.pos()
+        scene_pos = self.mapToScene(pos)
+        item = self.itemAt(pos)
+
+        menu = QMenu(self)
+
+        if isinstance(item, ConnectionItem):
+            # Context menu for connection
+            disconnect_action = menu.addAction("Disconnect")
+            disconnect_action.triggered.connect(lambda: self.delete_connection(item))
+        elif isinstance(item, PortWidget):
+            # Context menu for port - disconnect all connections
+            if item.is_connected:
+                disconnect_action = menu.addAction("Disconnect All")
+                disconnect_action.triggered.connect(lambda: self.disconnect_port(item))
+        elif isinstance(item, NodeWidget) or (item and item.parentItem() and isinstance(item.parentItem(), NodeWidget)):
+            # Context menu for node
+            node_widget = item if isinstance(item, NodeWidget) else item.parentItem()
+            delete_action = menu.addAction("Delete Node")
+            delete_action.triggered.connect(lambda: self.delete_node(node_widget.node))
+            menu.addSeparator()
+            duplicate_action = menu.addAction("Duplicate")
+            duplicate_action.triggered.connect(lambda: self.duplicate_node(node_widget.node))
+        else:
+            # Context menu for empty space - add nodes
+            add_menu = menu.addMenu("Add Node")
+            registry = get_registry()
+
+            # Group by category
+            nodes_by_category: dict[str, list[tuple[str, str]]] = {}
+            for name, node_class in registry.get_registry().items():
+                category = getattr(node_class, "category", "Uncategorized")
+                display_name = getattr(node_class, "name", name)
+                if category not in nodes_by_category:
+                    nodes_by_category[category] = []
+                nodes_by_category[category].append((name, display_name))
+
+            for category in sorted(nodes_by_category.keys()):
+                cat_menu = add_menu.addMenu(category)
+                for node_type, display_name in sorted(nodes_by_category[category], key=lambda x: x[1]):
+                    action = cat_menu.addAction(display_name)
+                    # Capture the variables in the lambda
+                    action.triggered.connect(
+                        lambda checked, nt=node_type, x=scene_pos.x(), y=scene_pos.y():
+                            self.add_node_at_position(nt, x, y)
+                    )
+
+        if menu.actions():
+            menu.exec(event.globalPos())
+
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """Handle drag enter."""
+        if event.mimeData().hasFormat("application/x-artifice-node"):
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event) -> None:
+        """Handle drag move - required for drop to work."""
         if event.mimeData().hasFormat("application/x-artifice-node"):
             event.acceptProposedAction()
 

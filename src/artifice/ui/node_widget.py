@@ -86,6 +86,7 @@ class PortWidget(QGraphicsObject):
         self._is_input = is_input
         self._is_connected = False
         self._is_hovered = False
+        self._is_compatible_target = False  # Highlight when dragging compatible connection
 
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
@@ -121,6 +122,17 @@ class PortWidget(QGraphicsObject):
         self._is_connected = value
         self.update()
 
+    @property
+    def is_compatible_target(self) -> bool:
+        """Check if port is highlighted as compatible target."""
+        return self._is_compatible_target
+
+    @is_compatible_target.setter
+    def is_compatible_target(self, value: bool) -> None:
+        """Set compatible target highlight state."""
+        self._is_compatible_target = value
+        self.update()
+
     def boundingRect(self) -> QRectF:
         """Get bounding rectangle."""
         r = self.HOVER_RADIUS + 2
@@ -135,17 +147,25 @@ class PortWidget(QGraphicsObject):
         """Paint the port."""
         color = self.TYPE_COLORS.get(self._port_type, self.TYPE_COLORS["ANY"])
 
-        radius = self.HOVER_RADIUS if self._is_hovered else self.RADIUS
+        radius = self.HOVER_RADIUS if (self._is_hovered or self._is_compatible_target) else self.RADIUS
 
         # Draw port circle
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        if self._is_connected or self._is_hovered:
+        # Draw glow when compatible target
+        if self._is_compatible_target:
+            glow_color = QColor(100, 255, 100, 100)
+            painter.setBrush(QBrush(glow_color))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QPointF(0, 0), radius + 4, radius + 4)
+
+        if self._is_connected or self._is_hovered or self._is_compatible_target:
             painter.setBrush(QBrush(color))
         else:
             painter.setBrush(QBrush(color.darker(150)))
 
-        painter.setPen(QPen(color.lighter(120), 1.5))
+        pen_color = color.lighter(150) if self._is_compatible_target else color.lighter(120)
+        painter.setPen(QPen(pen_color, 2 if self._is_compatible_target else 1.5))
         painter.drawEllipse(QPointF(0, 0), radius, radius)
 
     def hoverEnterEvent(self, event) -> None:

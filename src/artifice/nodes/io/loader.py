@@ -45,6 +45,8 @@ class ImageLoaderNode(Node):
             param_type=ParameterType.FILEPATH,
             default="",
             description="Path to image file",
+            file_filter="Images (*.png *.jpg *.jpeg *.tiff *.tif *.webp *.bmp *.gif);;PNG (*.png);;JPEG (*.jpg *.jpeg);;All Files (*)",
+            is_save_path=False,
         )
 
     def process(self) -> None:

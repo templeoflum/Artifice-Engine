@@ -523,8 +523,14 @@ class MainWindow(QMainWindow):
 
     def _update_preview_after_execution(self) -> None:
         """Update preview panel after graph execution."""
-        # Find nodes that can provide preview output
-        for node in self._graph.nodes:
+        # Get execution order and iterate in reverse to find the last node
+        # with an image output (shows the end of the processing chain)
+        execution_order = self._graph.get_execution_order()
+
+        for node_id in reversed(execution_order):
+            node = self._graph.nodes.get(node_id)
+            if node is None:
+                continue
             # Check if node has an image output with data
             for port_name, port in node.outputs.items():
                 if port.port_type.name == "IMAGE":

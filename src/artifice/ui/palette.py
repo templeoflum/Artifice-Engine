@@ -6,8 +6,8 @@ Displays available nodes organized by category with search functionality.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal, QMimeData
-from PySide6.QtGui import QDrag
+from PySide6.QtCore import Qt, Signal, QMimeData, QPoint
+from PySide6.QtGui import QDrag, QMouseEvent
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -15,9 +15,65 @@ from PySide6.QtWidgets import (
     QTreeWidget,
     QTreeWidgetItem,
     QAbstractItemView,
+    QApplication,
 )
 
 from artifice.core.registry import get_registry
+
+
+class DraggableTreeWidget(QTreeWidget):
+    """Tree widget with proper drag support for nodes."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._drag_start_pos: QPoint | None = None
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Record drag start position."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """Start drag if moved far enough."""
+        if not (event.buttons() & Qt.MouseButton.LeftButton):
+            return super().mouseMoveEvent(event)
+
+        if self._drag_start_pos is None:
+            return super().mouseMoveEvent(event)
+
+        # Check if we've moved far enough to start a drag
+        distance = (event.pos() - self._drag_start_pos).manhattanLength()
+        if distance < QApplication.startDragDistance():
+            return super().mouseMoveEvent(event)
+
+        # Get the item being dragged
+        item = self.itemAt(self._drag_start_pos)
+        if not item:
+            return super().mouseMoveEvent(event)
+
+        node_type = item.data(0, Qt.ItemDataRole.UserRole)
+        if not node_type:
+            return super().mouseMoveEvent(event)
+
+        # Create drag data
+        mime_data = QMimeData()
+        mime_data.setData(
+            "application/x-artifice-node",
+            node_type.encode()
+        )
+
+        # Create and execute drag
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+        drag.exec(Qt.DropAction.CopyAction)
+
+        self._drag_start_pos = None
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        """Clear drag start position."""
+        self._drag_start_pos = None
+        super().mouseReleaseEvent(event)
 
 
 class NodePalette(QWidget):
@@ -48,7 +104,7 @@ class NodePalette(QWidget):
         layout.addWidget(self._search)
 
         # Tree view
-        self._tree = QTreeWidget()
+        self._tree = DraggableTreeWidget(self)
         self._tree.setHeaderHidden(True)
         self._tree.setDragEnabled(True)
         self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
@@ -116,28 +172,6 @@ class NodePalette(QWidget):
         node_type = item.data(0, Qt.ItemDataRole.UserRole)
         if node_type:
             self.node_requested.emit(node_type)
-
-    def startDrag(self, supportedActions) -> None:
-        """Start drag operation for creating nodes."""
-        item = self._tree.currentItem()
-        if not item:
-            return
-
-        node_type = item.data(0, Qt.ItemDataRole.UserRole)
-        if not node_type:
-            return
-
-        # Create drag data
-        mime_data = QMimeData()
-        mime_data.setData(
-            "application/x-artifice-node",
-            node_type.encode()
-        )
-
-        # Create drag
-        drag = QDrag(self)
-        drag.setMimeData(mime_data)
-        drag.exec(Qt.DropAction.CopyAction)
 
     def refresh(self) -> None:
         """Refresh the node list."""

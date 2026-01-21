@@ -46,6 +46,8 @@ class ImageSaverNode(Node):
             param_type=ParameterType.FILEPATH,
             default="",
             description="Output file path",
+            file_filter="PNG (*.png);;JPEG (*.jpg *.jpeg);;WebP (*.webp);;TIFF (*.tiff *.tif);;BMP (*.bmp);;All Files (*)",
+            is_save_path=True,
         )
         self.add_parameter(
             "quality",
