@@ -6,25 +6,27 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-277%20passing-brightgreen.svg)]()
 
-A next-generation glitch art co-creative environment built on a node-based architecture for emergent complexity, semantic awareness, and generative processes.
+A node-based glitch art application for building image processing pipelines. Chain together transforms, corruption effects, and color manipulations to create unique visual artifacts.
 
 ![Artifice Screenshot](docs/images/screenshot.png)
 
-## Overview
+## What It Does
 
-Artifice evolves beyond traditional glitch tools into a unified platform where codec design, glitch art, generative art, and AI-assisted creation converge. The system enables users to cultivate and guide digital ecologies that produce aesthetically rich, often unpredictable visual and auditory experiences.
+Artifice is a visual programming environment for glitch art. You build processing pipelines by connecting nodes - each node performs a specific operation like loading an image, applying a transform, corrupting data, or saving output. The node-based approach lets you:
 
-### Key Features
+- **Experiment freely** - Rearrange, bypass, or duplicate processing stages without rewriting code
+- **See results immediately** - Real-time preview updates as you modify parameters
+- **Create complex effects** - Chain operations that would be tedious to script manually
+- **Save and share workflows** - Export your node graphs to recreate or share effects
 
-- **Node-Based Visual Programming** - Intuitive drag-and-drop interface for building complex image processing pipelines
-- **GLIC-Inspired Processing** - Advanced prediction, segmentation, and quantization algorithms derived from cutting-edge glitch research
-- **Real-Time Preview** - See your glitch effects as you build them
-- **Modular Algorithm Chaining** - Connect different algorithms in unique ways (e.g., bit corruption → pixel sorting)
-- **Extensible Architecture** - Create custom nodes with Python
-- **Multiple Color Spaces** - Work in RGB, HSV, LAB, XYZ, YCbCr, and more
-- **Comprehensive Transform Library** - DCT, FFT, Wavelets, Pixel Sorting, and data corruption tools
-- **File Browser Integration** - Easy file selection with native dialogs
-- **Context Menus** - Right-click for quick access to common actions
+### Core Capabilities
+
+- **GLIC-style processing** - Segmentation, prediction, and quantization algorithms for structured glitch effects
+- **Frequency transforms** - DCT, FFT, and wavelet decomposition for frequency-domain manipulation
+- **Data corruption** - Bit flipping, byte swapping, data repetition, and structural manipulation
+- **Pixel sorting** - Classic glitch aesthetic with configurable thresholds and sort criteria
+- **Color space conversion** - Work in RGB, HSV, LAB, YCbCr, and other color spaces
+- **Extensible** - Create custom nodes in Python
 
 ## Installation
 
@@ -44,18 +46,9 @@ cd Artifice
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
+# Install
 pip install -e .
 ```
-
-### Dependencies
-
-Core dependencies are automatically installed:
-- **NumPy** - Array operations and numerical computing
-- **Pillow** - Image loading and saving
-- **SciPy** - Scientific computing (wavelets, signal processing)
-- **PySide6** - Qt-based user interface
-- **PyWavelets** - Wavelet transforms
 
 ## Quick Start
 
@@ -65,107 +58,91 @@ Core dependencies are automatically installed:
 python -m artifice
 ```
 
-### Using the UI
+### Basic Workflow
 
-1. **Add nodes** - Drag nodes from the palette on the left, or right-click on the canvas
-2. **Connect nodes** - Click an output port (right side), then click an input port (left side)
-3. **Configure parameters** - Select a node to edit its parameters in the inspector panel
-4. **Load an image** - Select the Image Loader node and click "Browse..." to select a file
-5. **Execute** - Click the "Execute" button in the toolbar to process the graph
-6. **Save output** - Configure the Image Saver node with an output path
+1. **Add a Test Card** - Drag "Test Card" from the Generator category (or use Image Loader for your own images)
+2. **Add processing nodes** - Drag nodes from the palette onto the canvas
+3. **Connect nodes** - Click an output port, then click an input port
+4. **Adjust parameters** - Select a node to edit its settings in the inspector
+5. **Execute** - Press F5 or click Execute to process the graph
+6. **Save output** - Add an Image Saver node and configure the output path
 
-### Example Pipeline: Glitchy Pixel Sort
+### Example: Glitchy Pixel Sort
 
-1. Add **Image Loader** → **Bit Flip** → **Pixel Sort** → **Image Saver**
-2. Connect them in sequence (output → input)
-3. Configure Bit Flip: set probability to 0.001
-4. Configure Pixel Sort: choose "brightness" mode, set threshold
-5. Execute and view the result in the preview panel
+```
+[Test Card] → [Bit Flip] → [Pixel Sort] → [Image Saver]
+```
 
-### Programmatic Usage
+1. Add a **Test Card** node (Generator category)
+2. Add **Bit Flip** (Corruption) - set probability to 0.001
+3. Add **Pixel Sort** (Transform) - set mode to "brightness"
+4. Add **Image Saver** (I/O) - set output path
+5. Connect them in sequence and execute
+
+## Node Categories
+
+### I/O
+- **Image Loader** - Load PNG, JPG, TIFF, WebP, BMP, GIF
+- **Image Saver** - Save processed images
+
+### Generator
+- **Test Card** - Procedural calibration image with color bars, gradients, checkerboards, zone plate, and noise patterns
+
+### Color
+- **Color Space** - Convert between RGB, HSV, LAB, XYZ, YCbCr, LUV, YIQ
+- **Channel Split / Merge** - Separate and recombine color channels
+- **Channel Swap** - Reorder channels
+
+### Segmentation
+- **Quadtree Segment** - Adaptive segmentation by variance, edges, or gradient
+
+### Prediction
+- **Predict** - GLIC-style predictors (Horizontal, Vertical, DC, Paeth, Average, Gradient)
+
+### Quantization
+- **Quantize** - Reduce bit depth with uniform, adaptive, or per-channel modes
+
+### Transform
+- **DCT** - Discrete Cosine Transform
+- **FFT** - Fast Fourier Transform
+- **Wavelet** - Multi-level wavelet decomposition
+- **Pixel Sort** - Sort pixels by brightness, hue, saturation, or channel value
+
+### Corruption
+- **Bit Shift / Bit Flip** - Bit-level manipulation
+- **Byte Swap** - Byte-level corruption
+- **XOR Noise** - XOR-based noise patterns
+- **Data Repeat / Drop / Weave / Scramble** - Structural data manipulation
+
+### Pipeline
+- **GLIC Pipeline** - Combined segmentation → prediction → quantization in one node
+
+## Programmatic Usage
 
 ```python
 from artifice.core.graph import NodeGraph
 from artifice.nodes.io.loader import ImageLoaderNode
 from artifice.nodes.io.saver import ImageSaverNode
 from artifice.nodes.transform.pixelsort import PixelSortNode
-from artifice.nodes.corruption.bit_ops import BitFlipNode
 
-# Create a processing graph
 graph = NodeGraph()
 
-# Add nodes
 loader = ImageLoaderNode()
 loader.set_parameter("path", "input.png")
 
-bitflip = BitFlipNode()
-bitflip.set_parameter("probability", 0.001)
-
-pixelsort = PixelSortNode()
-pixelsort.set_parameter("sort_by", "brightness")
-pixelsort.set_parameter("direction", "horizontal")
+sort = PixelSortNode()
+sort.set_parameter("sort_by", "brightness")
 
 saver = ImageSaverNode()
 saver.set_parameter("path", "output.png")
 
-# Add to graph
-for node in [loader, bitflip, pixelsort, saver]:
+for node in [loader, sort, saver]:
     graph.add_node(node)
 
-# Connect the pipeline
-graph.connect(loader, "image", bitflip, "image")
-graph.connect(bitflip, "image", pixelsort, "image")
-graph.connect(pixelsort, "image", saver, "image")
-
-# Execute
+graph.connect(loader, "image", sort, "image")
+graph.connect(sort, "image", saver, "image")
 graph.execute()
 ```
-
-## Node Families
-
-Artifice provides a rich library of processing nodes organized by function:
-
-### Input/Output
-- **Image Loader** - Load images with file browser (PNG, JPG, TIFF, WebP, BMP, GIF)
-- **Image Saver** - Save processed images with format selection
-
-### Color Processing
-- **Color Space** - Convert between RGB, HSV, LAB, XYZ, YCbCr, LUV, YIQ
-- **Channel Split** / **Channel Merge** - Separate and combine color channels
-- **Channel Swap** - Reorder color channels
-
-### Segmentation
-- **Quadtree Segment** - Adaptive image segmentation with variance/edge/gradient criteria
-
-### Prediction
-- **Predict** - GLIC-style predictors (Horizontal, Vertical, DC, Paeth, Average, Gradient)
-
-### Quantization
-- **Quantize** - Reduce precision with uniform, adaptive, or per-channel modes
-
-### Transforms
-- **DCT** - Discrete Cosine Transform (block-based or full image)
-- **FFT** - Fast Fourier Transform with frequency manipulation
-- **Wavelet Transform** - Multi-level wavelet decomposition (Haar, Daubechies, Symlets, etc.)
-- **Pixel Sort** - Glitch-style pixel sorting by brightness, hue, saturation, or color channel
-
-### Data Corruption
-- **Bit Shift** / **Bit Flip** - Bit-level manipulation with configurable probability
-- **Byte Swap** - Byte-level channel swapping
-- **XOR Noise** - XOR-based noise injection
-- **Data Repeat** / **Data Drop** - Structural data manipulation
-- **Data Weave** / **Data Scramble** - Row/column interleaving and scrambling
-
-### Utility
-- **Pass Through** - Pass data unchanged (useful for debugging)
-
-## Documentation
-
-See [CLAUDE.md](CLAUDE.md) for:
-- Architecture overview
-- Node development guide
-- Port and parameter types
-- UI/UX features
 
 ## Project Structure
 
@@ -174,64 +151,58 @@ Artifice/
 ├── src/artifice/
 │   ├── core/           # Node system, graph, data types
 │   ├── nodes/          # Node implementations
-│   │   ├── io/         # Input/output nodes
-│   │   ├── color/      # Color processing
+│   │   ├── io/         # Image loading/saving
+│   │   ├── generator/  # Procedural image generation
+│   │   ├── color/      # Color space operations
 │   │   ├── segmentation/
 │   │   ├── prediction/
 │   │   ├── quantization/
 │   │   ├── transform/  # DCT, FFT, wavelets, pixel sort
 │   │   ├── corruption/ # Bit/byte manipulation
+│   │   ├── pipeline/   # Combined processing nodes
 │   │   └── utility/
-│   └── ui/             # Qt-based user interface
-├── tests/              # Comprehensive test suite
-├── docs/               # Documentation
-└── examples/           # Example projects and scripts
+│   └── ui/             # Qt-based interface
+├── tests/              # Test suite (277 tests)
+└── docs/               # Documentation
 ```
 
-## Development Status
+## Roadmap
 
-Artifice is under active development. Current implementation status:
+Current focus is on stability and usability. Planned features:
 
-- [x] **Phase 1**: Core node system and data flow
-- [x] **Phase 2**: GLIC-style processing nodes
-- [x] **Phase 3**: Transform and corruption nodes
-- [x] **Phase 4**: Qt-based user interface with drag-and-drop
-- [x] **Phase 4.5**: UX improvements (context menus, file browsers, connection management)
-- [ ] **Phase 5**: Video/temporal processing
-- [ ] **Phase 6**: AI integration
-- [ ] **Phase 7**: Audio reactivity
+- **Video processing** - Frame-by-frame processing, temporal effects, frame blending
+- **Real-time modulation** - Parameter animation, LFOs, envelope generators
+- **Audio reactivity** - Drive parameters from audio input
+- **GPU acceleration** - CUDA/OpenCL for performance-critical operations
+- **AI integration** - Semantic segmentation, style transfer, learned effects
+
+## Documentation
+
+- [CLAUDE.md](CLAUDE.md) - Architecture, node development guide, API reference
+- [docs/getting-started.md](docs/getting-started.md) - Detailed tutorial
+- [docs/node-development.md](docs/node-development.md) - Creating custom nodes
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Running Tests
+Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-# Run all tests
+# Run tests
 pytest
 
 # Run with coverage
 pytest --cov=artifice
-
-# Run specific test file
-pytest tests/test_graph.py -v
 ```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
 
 ## Acknowledgments
 
-- Inspired by [GLIC](https://github.com/example/glic) and glitch art research
-- Built with [PySide6](https://www.qt.io/qt-for-python) (Qt for Python)
-- Node editor concepts influenced by Blender, Nuke, and TouchDesigner
-
-## Contact
-
-- **Repository**: [github.com/templeoflum/Artifice](https://github.com/templeoflum/Artifice)
-- **Issues**: [GitHub Issues](https://github.com/templeoflum/Artifice/issues)
+- Inspired by [GLIC](https://github.com/snorpey/glitch-canvas) and glitch art research
+- Built with [PySide6](https://www.qt.io/qt-for-python)
+- Node editor concepts from Blender, Nuke, and TouchDesigner
 
 ---
 
