@@ -171,7 +171,7 @@ Artifice/
 
 Current focus is on stability and usability. Planned features:
 
-- **Analog video synthesis** - Oscillators, colorizers, keyers, and feedback systems inspired by hardware video synthesizers (LZX, Vidiot, Fairlight CVI)
+- **Video synthesis** - Oscillators, colorizers, keyers, and feedback systems inspired by hardware video synthesizers (LZX, Vidiot, Fairlight CVI)
 - **Real-time preview** - Continuous render loop for live synthesis experimentation
 - **Video processing** - Frame-by-frame processing, temporal effects, frame blending
 - **Audio reactivity** - Drive parameters from audio input
