@@ -64,7 +64,7 @@ python -m artifice
 2. **Add processing nodes** - Drag nodes from the palette onto the canvas
 3. **Connect nodes** - Click an output port, then click an input port
 4. **Adjust parameters** - Select a node to edit its settings in the inspector
-5. **Execute** - Press F5 or click Execute to process the graph
+5. **Execute** - Press Shift+E or click Execute to process the graph
 6. **Save output** - Add an Image Saver node and configure the output path
 
 ### Example: Color Space Glitch
@@ -77,7 +77,7 @@ python -m artifice
 2. Add **Color Space** (Color) - leave as RGB for now
 3. Add **Bit Flip** (Corruption) - set bit position to 7, probability to 1.0
 4. Add **Pixel Sort** (Transform) - set mode to "brightness", lower the threshold to get visible results
-5. Connect them in sequence and execute (F5)
+5. Connect them in sequence and execute (Shift+E)
 6. Now change **Color Space** to YCbCr or LAB and execute again - observe how the same corruption produces completely different effects depending on color space
 
 ## Node Categories
