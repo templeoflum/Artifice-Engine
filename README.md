@@ -185,9 +185,20 @@ Artifice/
 └── docs/               # Documentation
 ```
 
+## Compatibility
+
+- **Developed and tested on Windows only** - macOS and Linux support is untested and may have issues
+- Requires Python 3.10 or higher
+- Some nodes may be slow on large images without GPU acceleration (planned feature)
+
+## Known Issues
+
+- **Test suite dialog prompt** - Running `pytest` triggers a "Save or Discard" dialog that requires manually clicking "Discard" to continue. Tests will complete normally after dismissing.
+- **High DPI scaling** - UI may appear small on high-DPI displays; Qt scaling settings may help
+
 ## Roadmap
 
-Current focus is on stability and usability. Planned features:
+Current focus is on stability and cross-platform compatibility. Planned features:
 
 - **Video synthesis** - Oscillators, colorizers, keyers, and feedback systems inspired by hardware video synthesizers (LZX, Vidiot, Fairlight CVI)
 - **Real-time preview** - Continuous render loop for live synthesis experimentation
