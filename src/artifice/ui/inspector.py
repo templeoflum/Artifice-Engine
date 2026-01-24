@@ -132,9 +132,9 @@ class FloatParameterWidget(ParameterWidget):
         layout.addWidget(label)
 
         # Slider
-        self._min_val = self._param_info.get("min_value", 0.0)
-        self._max_val = self._param_info.get("max_value", 1.0)
-        step = self._param_info.get("step", 0.01)
+        self._min_val = self._param_info.get("min_value") or 0.0
+        self._max_val = self._param_info.get("max_value") or 1.0
+        step = self._param_info.get("step") or 0.01
 
         self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setRange(0, 1000)  # Map to 0-1000 range internally
@@ -379,6 +379,7 @@ class InspectorPanel(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameStyle(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # Container for parameter widgets
         self._param_container = QWidget()
@@ -388,7 +389,7 @@ class InspectorPanel(QWidget):
         self._param_layout.addStretch()
 
         scroll.setWidget(self._param_container)
-        layout.addWidget(scroll)
+        layout.addWidget(scroll, 1)  # Give scroll area stretch priority
 
     def set_node(self, node: Node) -> None:
         """Set the node to inspect."""

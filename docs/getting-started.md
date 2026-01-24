@@ -125,7 +125,7 @@ The main workspace where you build your processing pipeline:
 
 Shows the output of your processing pipeline:
 
-- Updates when you execute the graph (F5)
+- Updates when you execute the graph (Shift+E)
 - Zoom with scroll wheel
 - Pan by dragging
 
@@ -181,7 +181,7 @@ Let's create a simple glitch effect pipeline.
 
 ### Step 5: Execute
 
-Press **F5** or go to **Graph → Execute** to run the pipeline.
+Press **Shift+E** or go to **Graph → Execute** to run the pipeline.
 
 Your processed image will appear in the Preview panel and be saved to the specified path!
 
@@ -270,7 +270,7 @@ Loader → Wavelet → [modify coefficients] → Inverse Wavelet → Saver
 | Paste | Ctrl+V |
 | Delete | Delete |
 | Select All | Ctrl+A |
-| Execute Graph | F5 |
+| Execute Graph | Shift+E |
 | Zoom In | Ctrl++ |
 | Zoom Out | Ctrl+- |
 | Reset Zoom | Ctrl+0 |
@@ -329,11 +329,12 @@ Now that you understand the basics:
 3. **Create Custom Nodes**: Build your own processing algorithms
 4. **Join the Community**: Share your creations and get help
 
-### Recommended Tutorials
+### Recommended Reading
 
-1. [Architecture Overview](architecture.md) - Deep dive into system design
-2. [Node Development Guide](node-development.md) - Create custom nodes
-3. [API Reference](api-reference.md) - Complete API documentation
+1. [Node Reference](node-reference.md) - Complete documentation for all 33 nodes
+2. [Architecture Overview](architecture.md) - Deep dive into system design
+3. [Node Development Guide](node-development.md) - Create custom nodes
+4. [API Reference](api-reference.md) - Complete API documentation
 
 ---
 

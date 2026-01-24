@@ -125,6 +125,7 @@ class MainWindow(QMainWindow):
 
         # Inspector Panel (right dock, below preview)
         self._inspector = InspectorPanel()
+        self._inspector.setMinimumHeight(300)  # Ensure enough room for parameters
         self._inspector_dock = QDockWidget("Inspector", self)
         self._inspector_dock.setObjectName("InspectorDock")
         self._inspector_dock.setWidget(self._inspector)
