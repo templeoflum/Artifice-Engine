@@ -300,7 +300,7 @@ class TestGPUNodes:
 
     def test_bitflip_node_creation(self):
         """Test BitFlip GPU node can be created."""
-        from artifice.core.gpu_node import BitFlipGPUNode
+        from artifice.nodes.gpu.corruption import BitFlipGPUNode
 
         node = BitFlipGPUNode()
 
@@ -310,7 +310,7 @@ class TestGPUNodes:
 
     def test_quantize_node_creation(self):
         """Test Quantize GPU node can be created."""
-        from artifice.core.gpu_node import QuantizeGPUNode
+        from artifice.nodes.gpu.quantization import QuantizeGPUNode
 
         node = QuantizeGPUNode()
 
@@ -320,7 +320,7 @@ class TestGPUNodes:
 
     def test_colorspace_node_creation(self):
         """Test ColorSpace GPU node can be created."""
-        from artifice.core.gpu_node import ColorSpaceGPUNode
+        from artifice.nodes.gpu.color import ColorSpaceGPUNode
 
         node = ColorSpaceGPUNode()
 
@@ -328,6 +328,17 @@ class TestGPUNodes:
         assert node.category == "Color"
         assert "from_space" in node.parameters
         assert "to_space" in node.parameters
+
+    def test_testcard_gpu_node_creation(self):
+        """Test TestCard GPU node can be created."""
+        from artifice.nodes.gpu.generator import TestCardGPUNode
+
+        node = TestCardGPUNode()
+
+        assert node.name == "Test Card (GPU)"
+        assert node.category == "Generator"
+        assert "size" in node.parameters
+        assert "seed" in node.parameters
 
 
 class TestShaderLoading:

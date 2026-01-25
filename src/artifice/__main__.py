@@ -112,6 +112,22 @@ def register_all_nodes():
     from artifice.nodes.utility.passthrough import NullNode
     NodeRegistry.register(NullNode)
 
+    # GPU-accelerated nodes
+    from artifice.nodes.gpu.generator import TestCardGPUNode
+    from artifice.nodes.gpu.corruption import (
+        BitFlipGPUNode,
+        BitShiftGPUNode,
+        XORNoiseGPUNode,
+    )
+    from artifice.nodes.gpu.color import ColorSpaceGPUNode
+    from artifice.nodes.gpu.quantization import QuantizeGPUNode
+    NodeRegistry.register(TestCardGPUNode)
+    NodeRegistry.register(BitFlipGPUNode)
+    NodeRegistry.register(BitShiftGPUNode)
+    NodeRegistry.register(XORNoiseGPUNode)
+    NodeRegistry.register(ColorSpaceGPUNode)
+    NodeRegistry.register(QuantizeGPUNode)
+
 
 def main():
     """Launch the Artifice application."""

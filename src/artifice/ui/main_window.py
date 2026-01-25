@@ -291,6 +291,13 @@ class MainWindow(QMainWindow):
 
         graph_menu.addSeparator()
 
+        self._action_gpu_demo = QAction("Create &GPU Demo Graph", self)
+        self._action_gpu_demo.setShortcut(QKeySequence("Ctrl+G"))
+        self._action_gpu_demo.triggered.connect(self._create_gpu_demo_graph)
+        graph_menu.addAction(self._action_gpu_demo)
+
+        graph_menu.addSeparator()
+
         self._action_clear = QAction("&Clear Graph", self)
         self._action_clear.triggered.connect(self._clear_graph)
         graph_menu.addAction(self._action_clear)
@@ -650,6 +657,35 @@ class MainWindow(QMainWindow):
         # Reset modified state since this is the initial state
         self._modified = False
         self._update_title()
+
+    def _create_gpu_demo_graph(self) -> None:
+        """Create a GPU node demo graph for testing real-time preview.
+
+        Creates: TestCard (GPU) → BitFlip (GPU) → ColorSpace (GPU)
+        """
+        # Clear existing graph
+        self._graph.clear()
+        self._node_editor.clear()
+
+        # Add GPU Test Card node on the left
+        test_card = self._node_editor.add_node_at_position("TestCardGPUNode", -300, 0)
+
+        # Add GPU BitFlip in the middle
+        bitflip = self._node_editor.add_node_at_position("BitFlipGPUNode", 0, 0)
+
+        # Add GPU ColorSpace on the right
+        colorspace = self._node_editor.add_node_at_position("ColorSpaceGPUNode", 300, 0)
+
+        # Connect them
+        if test_card and bitflip:
+            self._node_editor.connect(test_card, "image", bitflip, "image")
+        if bitflip and colorspace:
+            self._node_editor.connect(bitflip, "image", colorspace, "image")
+
+        self._mark_modified()
+        self._statusbar.showMessage(
+            "GPU demo graph created. Use Shift+R to toggle real-time preview.", 5000
+        )
 
     # --- GPU Real-Time Methods ---
 

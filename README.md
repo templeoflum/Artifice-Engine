@@ -4,35 +4,92 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-277%20passing-brightgreen.svg)]()
+[![GPU Accelerated](https://img.shields.io/badge/GPU-OpenGL%204.3-green.svg)]()
 
-A node-based glitch art application for building image processing pipelines. Chain together transforms, corruption effects, and color manipulations to create unique visual artifacts.
+A real-time GPU-accelerated glitch art environment built on a node-based architecture. Create GLIC-style codec glitches, pixel sorting, data corruption, and color space manipulations at 60fps.
 
 ![Artifice Screenshot](docs/images/screenshot.png)
 
 ## What It Does
 
-Artifice is a visual programming environment for glitch art. You build processing pipelines by connecting nodes - each node performs a specific operation like loading an image, applying a transform, corrupting data, or saving output. The node-based approach lets you:
+Artifice is a visual programming environment for real-time glitch art. You build processing pipelines by connecting nodes - each node executes on the GPU via compute shaders, enabling instant feedback as you tweak parameters. The node-based approach lets you:
 
-- **Experiment freely** - Rearrange, bypass, or duplicate processing stages without rewriting code
-- **See results immediately** - Real-time preview updates as you modify parameters
-- **Create complex effects** - Chain operations that would be tedious to script manually
+- **Experiment in real-time** - See results instantly at 60fps as you adjust parameters
+- **Chain complex effects** - Build sophisticated processing pipelines by connecting nodes
+- **Explore the GLIC codec** - Full implementation of GLIC prediction, residuals, and reconstruction
+- **Work in any color space** - 16 color spaces for different glitch characteristics
 - **Save and share workflows** - Export your node graphs to recreate or share effects
 
-### Core Capabilities
+### Architecture Evolution
 
-- **GLIC-style processing** - Segmentation, prediction, and quantization algorithms for structured glitch effects
-- **Frequency transforms** - DCT, FFT, and wavelet decomposition for frequency-domain manipulation
-- **Data corruption** - Bit flipping, byte swapping, data repetition, and structural manipulation
-- **Pixel sorting** - Classic glitch aesthetic with configurable thresholds and sort criteria
-- **Color space conversion** - Work in RGB, HSV, LAB, YCbCr, and other color spaces
-- **Extensible** - Create custom nodes in Python
+Artifice exists in two forms:
+
+| Version | Architecture | Use Case |
+|---------|-------------|----------|
+| **v1** (this repo) | CPU/NumPy pipeline | Batch processing, maximum quality, full feature set |
+| **v2** (realtime branch) | GPU compute shaders | Real-time preview, live performance, interactive exploration |
+
+The GPU architecture achieves 60fps on 1080p images where v1 takes 50-500ms per frame, making it ideal for live experimentation and performance contexts.
+
+## Core Capabilities
+
+### GLIC Codec (Glitch Codec)
+
+Full implementation of the GLIC image codec for structured glitch art:
+
+- **16 Predictors** - None, Corner, Horizontal, Vertical, DC Mean, DC Median, Median, Average, TrueMotion, Paeth, Linear Diagonal, H/V Position, JPEG-LS, Difference
+- **Predictor Selection Modes**:
+  - **SAD (Best)** - Automatically selects the predictor with minimum error per block
+  - **BSAD (Worst)** - Selects the WORST predictor for maximum glitch effect
+  - **Random** - Random predictor per block for chaotic results
+- **Residual Methods** - Subtract, Clamp, Wrap, CLAMP_MOD256 (GLIC-style color shifts)
+- **Signed Quantization** - Proper residual encoding for reconstruction
+
+### Color Space Processing
+
+All 16 GLIC color spaces for different glitch characteristics:
+
+| Category | Spaces | Best For |
+|----------|--------|----------|
+| **Perceptual** | LAB, LUV, HCL | Smooth gradients, perceptually uniform manipulation |
+| **Video** | YCbCr, YUV, YPbPr, YDbDr | Classic video glitch aesthetic, luma/chroma separation |
+| **Artist** | HSV, HSL, HWB | Intuitive hue/saturation control |
+| **Scientific** | XYZ, YXY | Color science, chromaticity diagrams |
+| **Special** | CMY, OHTA, GREY | Subtractive color, feature extraction, grayscale |
+
+**Tip:** Glitch effects work best by converting to a luma-chroma space (YCbCr, LAB), corrupting the chroma channels, then converting back. This preserves image structure while creating dramatic color shifts.
+
+### Data Corruption
+
+GPU-accelerated bit and byte manipulation:
+
+- **Bit Flip** - Toggle specific bits with configurable probability and channel targeting
+- **Bit Shift** - Shift bits left/right with rotation or truncation
+- **XOR Noise** - XOR pixel data with noise patterns
+- **Data Repeat/Drop** - Duplicate or skip rows/columns of data
+- **Data Scramble** - Shuffle data segments based on block patterns
+- **Data Weave** - Interleave two images in horizontal, vertical, or checker patterns
+
+### Transforms
+
+- **Pixel Sort** - Sort by brightness, hue, saturation, or RGB channels with threshold modes
+- **DCT** - Discrete Cosine Transform for JPEG-style block effects
+- **FFT** - Frequency domain manipulation
+- **Wavelet** - Multi-level wavelet decomposition
+
+### Quantization
+
+- **Uniform/Adaptive** - Equal bins or concentrated near common values
+- **Signed Mode** - For proper residual encoding (-1 to 1 range)
+- **Dithering** - Bayer and Blue Noise dither patterns
+- **1-16 bit depth** - From binary to near-lossless
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.10 or higher
+- OpenGL 4.3 compatible GPU (for real-time mode)
 - pip package manager
 
 ### Quick Install
@@ -46,8 +103,16 @@ cd Artifice
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install
+# Install dependencies
 pip install -e .
+```
+
+### GPU Backend Requirements
+
+For real-time GPU rendering (v2/realtime branch):
+
+```bash
+pip install moderngl PyOpenGL
 ```
 
 ## Quick Start
@@ -60,185 +125,95 @@ python -m artifice
 
 ### Basic Workflow
 
-The workspace opens with a Test Card and Color Space node already connected, so you can start experimenting immediately.
+1. **Add nodes** - Drag from the palette onto the canvas
+2. **Connect nodes** - Click output port, then input port
+3. **Adjust parameters** - Select a node to edit in the inspector
+4. **Preview updates in real-time** - GPU nodes render at 60fps
 
-1. **Add processing nodes** - Drag nodes from the palette onto the canvas
-2. **Connect nodes** - Click an output port, then click an input port
-3. **Adjust parameters** - Select a node to edit its settings in the inspector
-4. **Execute** - Press Shift+E or click Execute to process the graph
-5. **Save output** - Add an Image Saver node and configure the output path
-
-### Understanding the Test Card
-
-The Test Card is a procedural calibration image designed to reveal how different effects behave. Each region targets specific operations:
-
-| Pattern | Purpose |
-|---------|---------|
-| **Color Bars** (RGBCMYK) | Test color/channel operations, see how effects treat individual colors |
-| **Checkerboard** (8×8) | Reveal frequency-domain effects (DCT, FFT), compression artifacts |
-| **Diagonal Lines** | Test directional operations like pixel sorting and wavelet transforms |
-| **Zone Plate** | Concentric sine rings that expose aliasing and frequency response |
-| **Step Wedge** | Discrete gray levels to visualize quantization and bit depth reduction |
-| **Radial Gradient** | Test smooth gradients, circular distortions, and vignette effects |
-| **Fine Checkerboard** (16×16) | Higher frequency patterns for detailed frequency analysis |
-| **Perlin Noise** | Test segmentation algorithms and texture-based effects |
-| **Rainbow Hue Sweep** | Full-width spectrum for color space conversion testing |
-| **Grayscale Gradient** | Full tonal range to test contrast, gamma, and tonal response |
-
-When experimenting with a new node, run it on the Test Card first - the structured patterns make it easy to understand what the effect is actually doing.
-
-### Example: Color Space Glitch Sort
+### Example: GLIC-Style Color Glitch
 
 ```
-[Test Card] → [Color Space] → [Bit Flip] → [Pixel Sort]
+[Test Card] → [Color Space: RGB→YCbCr] → [GLIC Predict: BSAD] → [Quantize: 4 bits, Signed] → [GLIC Reconstruct] → [Color Space: YCbCr→RGB]
 ```
 
-1. Add **Bit Flip** (Corruption) - set bit position to 7, probability to 1.0
-2. Add **Pixel Sort** (Transform) - set mode to "brightness"
-3. Connect them to the existing Color Space node and execute (Shift+E)
-4. Now change **Color Space** to YCbCr or LAB and execute again - observe how the same corruption produces completely different effects depending on color space
+This pipeline:
+1. Converts to YCbCr (separates luma from chroma)
+2. Generates predictions using the WORST predictor (BSAD mode)
+3. Quantizes residuals to 4 bits (destroys subtle information)
+4. Reconstructs with quantized residuals (creates color shifts)
+5. Converts back to RGB for display
 
-## Node Categories
+## Node Reference
 
-### I/O
-- **Image Loader** - Load PNG, JPG, TIFF, WebP, BMP, GIF
-- **Image Saver** - Save processed images
+See [NODES.md](NODES.md) for complete node specifications with all parameters.
 
-### Generator
-- **Test Card** - Procedural calibration image with color bars, gradients, checkerboards, zone plate, and noise patterns
+### Quick Reference
 
-### Color
-- **Color Space** - Convert between RGB, HSV, LAB, XYZ, YCbCr, LUV, YIQ
-- **Channel Split / Merge** - Separate and recombine color channels
-- **Channel Swap** - Reorder channels
-
-### Segmentation
-- **Quadtree Segment** - Adaptive segmentation by variance, edges, or gradient
-
-### Prediction
-- **Predict** - GLIC-style predictors (Horizontal, Vertical, DC, Paeth, Average, Gradient)
-
-### Quantization
-- **Quantize** - Reduce bit depth with uniform, adaptive, or per-channel modes
-
-### Transform
-- **DCT** - Discrete Cosine Transform
-- **FFT** - Fast Fourier Transform
-- **Wavelet** - Multi-level wavelet decomposition
-- **Pixel Sort** - Sort pixels by brightness, hue, saturation, or channel value
-
-### Corruption
-- **Bit Shift / Bit Flip** - Bit-level manipulation
-- **Byte Swap** - Byte-level corruption
-- **XOR Noise** - XOR-based noise patterns
-- **Data Repeat / Drop / Weave / Scramble** - Structural data manipulation
-
-### Pipeline
-- **GLIC Pipeline** - Combined segmentation → prediction → quantization in one node
-
-## Programmatic Usage
-
-```python
-from artifice.core.graph import NodeGraph
-from artifice.nodes.io.loader import ImageLoaderNode
-from artifice.nodes.io.saver import ImageSaverNode
-from artifice.nodes.transform.pixelsort import PixelSortNode
-
-graph = NodeGraph()
-
-loader = ImageLoaderNode()
-loader.set_parameter("path", "input.png")
-
-sort = PixelSortNode()
-sort.set_parameter("sort_by", "brightness")
-
-saver = ImageSaverNode()
-saver.set_parameter("path", "output.png")
-
-for node in [loader, sort, saver]:
-    graph.add_node(node)
-
-graph.connect(loader, "image", sort, "image")
-graph.connect(sort, "image", saver, "image")
-graph.execute()
-```
+| Category | Nodes |
+|----------|-------|
+| **I/O** | Image Loader, Image Saver |
+| **Generators** | Test Card, Noise |
+| **Color** | Color Space, Channel Split/Merge/Swap, Blend, Invert, Brightness/Contrast, Threshold, Posterize |
+| **GLIC** | GLIC Predict, GLIC Residual, GLIC Reconstruct |
+| **Quantization** | Quantize |
+| **Transform** | Pixel Sort, DCT, FFT, Wavelet, Mirror, Rotate, Blur, Sharpen, Edge Detect |
+| **Corruption** | Bit Flip, Bit Shift, XOR Noise, Data Repeat, Data Drop, Data Scramble, Data Weave |
 
 ## Project Structure
 
 ```
 Artifice/
 ├── src/artifice/
-│   ├── core/           # Node system, graph, data types
+│   ├── core/           # Node system, graph, ports (v1)
+│   ├── engine/         # GPU backend, pipeline, textures (v2)
 │   ├── nodes/          # Node implementations
-│   │   ├── io/         # Image loading/saving
-│   │   ├── generator/  # Procedural image generation
-│   │   ├── color/      # Color space operations
-│   │   ├── segmentation/
-│   │   ├── prediction/
-│   │   ├── quantization/
-│   │   ├── transform/  # DCT, FFT, wavelets, pixel sort
-│   │   ├── corruption/ # Bit/byte manipulation
-│   │   ├── pipeline/   # Combined processing nodes
-│   │   └── utility/
+│   ├── shaders/        # GLSL compute shaders (v2)
 │   └── ui/             # Qt-based interface
-├── tests/              # Test suite (277 tests)
-└── docs/               # Documentation
+├── tests/              # Test suite
+├── docs/               # Documentation
+├── NODES.md            # Complete node specifications
+├── DEVLOG.md           # Development history
+└── ROADMAP.md          # Future plans
 ```
-
-## Compatibility
-
-- **Developed and tested on Windows only** - macOS and Linux support is untested and may have issues
-- Requires Python 3.10 or higher
-- Some nodes may be slow on large images without GPU acceleration (planned feature)
-
-## Known Issues
-
-- **Test suite dialog prompt** - Running `pytest` triggers a "Save or Discard" dialog that requires manually clicking "Discard" to continue. Tests will complete normally after dismissing.
-- **High DPI scaling** - UI may appear small on high-DPI displays; Qt scaling settings may help
-
-## Roadmap
-
-Current focus is on stability and cross-platform compatibility. Planned features:
-
-- **Video synthesis** - Oscillators, colorizers, keyers, and feedback systems inspired by hardware video synthesizers (LZX, Vidiot, Fairlight CVI)
-- **Real-time preview** - Continuous render loop for live synthesis experimentation
-- **Video processing** - Frame-by-frame processing, temporal effects, frame blending
-- **Audio processing** - Audio codecs, compression artifacts, sonification techniques, spectrogram manipulation
-- **Audio reactivity** - Drive parameters from audio input
-- **GPU acceleration** - CUDA/OpenCL for performance-critical operations
-- **AI integration** - Semantic segmentation, style transfer, learned effects
 
 ## Documentation
 
-- [CLAUDE.md](CLAUDE.md) - Architecture, node development guide, API reference (also serves as context for Claude Code)
-- [docs/getting-started.md](docs/getting-started.md) - Detailed tutorial
-- [docs/node-development.md](docs/node-development.md) - Creating custom nodes
+- [NODES.md](NODES.md) - Complete node specifications with all parameters
+- [DEVLOG.md](DEVLOG.md) - Development log: v1 to v2 evolution
+- [ROADMAP.md](ROADMAP.md) - Future implementation plans
+- [CLAUDE.md](CLAUDE.md) - Architecture reference for Claude Code development
 
-## Contributing
+## Development
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+This project is developed using [Claude Code](https://claude.ai/claude-code), with Claude handling implementation under human creative direction.
 
 ```bash
 # Run tests
 pytest
 
+# Run GPU-specific tests
+pytest tests/test_gpu.py -v
+
 # Run with coverage
 pytest --cov=artifice
 ```
+
+## Compatibility
+
+- **Windows** - Fully tested and supported
+- **macOS/Linux** - May work but untested
+- **GPU** - Requires OpenGL 4.3 for real-time mode
+- **Python** - 3.10 or higher
 
 ## License
 
 MIT License - see [LICENSE](LICENSE)
 
-## Development
-
-This project is developed using [Claude Code](https://claude.ai/claude-code), with Claude (Anthropic's AI) handling implementation under human guidance and creative direction. The codebase is structured for continued AI-assisted development - see [CLAUDE.md](CLAUDE.md) for architecture details and development patterns.
-
 ## Acknowledgments
 
 - Developed with [Claude Code](https://claude.ai/claude-code) by Anthropic
-- Inspired by [GLIC](https://github.com/GlitchCodec/GLIC) and glitch art research
-- Built with [PySide6](https://www.qt.io/qt-for-python)
+- Inspired by [GLIC](https://github.com/GlitchCodec/GLIC) glitch codec
+- Built with [PySide6](https://www.qt.io/qt-for-python) and [ModernGL](https://moderngl.readthedocs.io/)
 - Node editor concepts from Blender, Nuke, and TouchDesigner
 
 ---
