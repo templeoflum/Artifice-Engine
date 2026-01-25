@@ -7,10 +7,11 @@ and node palette arranged in a typical node-based application layout.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QSettings
+from PySide6.QtCore import Qt, QSettings, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QCloseEvent, QIcon
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QApplication,
     QStatusBar,
+    QLabel,
 )
 
 from artifice.core.graph import NodeGraph
@@ -35,6 +37,8 @@ from artifice.ui.about_dialog import AboutDialog
 
 if TYPE_CHECKING:
     from artifice.core.node import Node
+    from artifice.gpu.backend import GPUBackend
+    from artifice.core.stream_executor import StreamExecutor
 
 
 class MainWindow(QMainWindow):
@@ -62,6 +66,12 @@ class MainWindow(QMainWindow):
         self._current_file: Path | None = None
         self._modified = False
 
+        # GPU components (initialized lazily)
+        self._gpu_backend: GPUBackend | None = None
+        self._stream_executor: StreamExecutor | None = None
+        self._gpu_available = False
+        self._realtime_mode = False
+
         # Version checking
         self._version_checker = VersionChecker(self)
         self._pending_update: VersionInfo | None = None
@@ -72,6 +82,9 @@ class MainWindow(QMainWindow):
         self._setup_toolbars()
         self._setup_statusbar()
         self._setup_connections()
+
+        # Initialize GPU (non-blocking)
+        QTimer.singleShot(100, self._init_gpu_backend)
 
         # Load settings
         self._load_settings()
@@ -113,8 +126,9 @@ class MainWindow(QMainWindow):
         self._node_editor = NodeEditorWidget(self._graph, self._undo_stack)
         self.setCentralWidget(self._node_editor)
 
-        # Preview Panel (right dock)
+        # Preview Panel (right dock) - Start with CPU preview, GPU added later
         self._preview = PreviewPanel()
+        self._realtime_preview = None  # Created when GPU is initialized
         self._preview_dock = QDockWidget("Preview", self)
         self._preview_dock.setObjectName("PreviewDock")
         self._preview_dock.setWidget(self._preview)
@@ -265,6 +279,18 @@ class MainWindow(QMainWindow):
         self._action_execute.triggered.connect(self.execute_graph)
         graph_menu.addAction(self._action_execute)
 
+        graph_menu.addSeparator()
+
+        self._action_realtime = QAction("&Real-Time Preview", self)
+        self._action_realtime.setShortcut(QKeySequence("Shift+R"))
+        self._action_realtime.setCheckable(True)
+        self._action_realtime.setChecked(False)
+        self._action_realtime.setEnabled(False)  # Enabled when GPU is ready
+        self._action_realtime.triggered.connect(self._toggle_realtime_mode)
+        graph_menu.addAction(self._action_realtime)
+
+        graph_menu.addSeparator()
+
         self._action_clear = QAction("&Clear Graph", self)
         self._action_clear.triggered.connect(self._clear_graph)
         graph_menu.addAction(self._action_clear)
@@ -347,28 +373,6 @@ class MainWindow(QMainWindow):
         settings = QSettings("ArtificeEngine", "Artifice")
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
-
-    def closeEvent(self, event: QCloseEvent) -> None:
-        """Handle window close."""
-        if self._modified:
-            result = QMessageBox.question(
-                self,
-                "Unsaved Changes",
-                "You have unsaved changes. Do you want to save before closing?",
-                QMessageBox.StandardButton.Save
-                | QMessageBox.StandardButton.Discard
-                | QMessageBox.StandardButton.Cancel,
-            )
-            if result == QMessageBox.StandardButton.Save:
-                if not self.save_project():
-                    event.ignore()
-                    return
-            elif result == QMessageBox.StandardButton.Cancel:
-                event.ignore()
-                return
-
-        self._save_settings()
-        event.accept()
 
     # --- Slots ---
 
@@ -646,3 +650,162 @@ class MainWindow(QMainWindow):
         # Reset modified state since this is the initial state
         self._modified = False
         self._update_title()
+
+    # --- GPU Real-Time Methods ---
+
+    def _init_gpu_backend(self) -> None:
+        """Initialize the GPU backend."""
+        try:
+            from artifice.gpu.moderngl_backend import ModernGLBackend
+
+            self._gpu_backend = ModernGLBackend(standalone=True)
+            self._gpu_backend.initialize()
+            self._gpu_available = True
+
+            # Enable real-time action
+            self._action_realtime.setEnabled(True)
+            self._statusbar.showMessage(
+                f"GPU initialized (OpenGL {self._gpu_backend.ctx.version_code})", 3000
+            )
+
+            # Create real-time preview widget
+            self._setup_realtime_preview()
+
+        except Exception as e:
+            self._gpu_available = False
+            self._statusbar.showMessage(f"GPU not available: {e}", 5000)
+
+    def _setup_realtime_preview(self) -> None:
+        """Set up the real-time preview widget."""
+        if not self._gpu_available or not self._gpu_backend:
+            return
+
+        try:
+            from artifice.ui.realtime_preview import RealtimePreviewPanel
+            from artifice.core.stream_executor import StreamExecutor
+
+            # Create real-time preview panel
+            self._realtime_preview = RealtimePreviewPanel()
+            self._realtime_preview.set_backend(self._gpu_backend)
+
+            # Create stream executor
+            self._stream_executor = StreamExecutor(self._gpu_backend, self)
+            self._stream_executor.set_output_size(1920, 1080)
+            self._stream_executor.stats_updated.connect(self._on_gpu_stats_updated)
+
+            # Connect preview to executor
+            self._realtime_preview.set_executor(self._stream_executor)
+
+        except Exception as e:
+            self._statusbar.showMessage(f"Real-time preview setup failed: {e}", 5000)
+
+    def _toggle_realtime_mode(self, enabled: bool) -> None:
+        """Toggle between CPU and GPU real-time preview."""
+        if not self._gpu_available:
+            self._action_realtime.setChecked(False)
+            QMessageBox.warning(
+                self,
+                "GPU Not Available",
+                "GPU acceleration is not available on this system.",
+            )
+            return
+
+        self._realtime_mode = enabled
+
+        if enabled:
+            self._start_realtime_preview()
+        else:
+            self._stop_realtime_preview()
+
+    def _start_realtime_preview(self) -> None:
+        """Start real-time GPU preview."""
+        if not self._realtime_preview or not self._stream_executor:
+            return
+
+        # Swap preview widgets
+        self._preview_dock.setWidget(self._realtime_preview)
+        self._preview_dock.setWindowTitle("Preview (Real-Time)")
+
+        # Start streaming
+        self._stream_executor.set_graph(self._graph)
+
+        # Use a timer to drive the executor since we're not using asyncio event loop
+        self._realtime_timer = QTimer(self)
+        self._realtime_timer.timeout.connect(self._realtime_frame_tick)
+        self._realtime_timer.start(16)  # ~60 FPS
+
+        self._statusbar.showMessage("Real-time preview started (60 FPS target)")
+
+    def _stop_realtime_preview(self) -> None:
+        """Stop real-time GPU preview."""
+        # Stop timer
+        if hasattr(self, '_realtime_timer') and self._realtime_timer:
+            self._realtime_timer.stop()
+            self._realtime_timer = None
+
+        # Stop executor
+        if self._stream_executor:
+            self._stream_executor.stop()
+
+        # Swap back to CPU preview
+        self._preview_dock.setWidget(self._preview)
+        self._preview_dock.setWindowTitle("Preview")
+
+        self._statusbar.showMessage("Real-time preview stopped")
+
+    def _realtime_frame_tick(self) -> None:
+        """Execute one frame in real-time mode."""
+        if not self._stream_executor or not self._realtime_mode:
+            return
+
+        try:
+            # Execute single frame synchronously
+            self._stream_executor.execute_single_frame()
+        except Exception as e:
+            # Don't spam errors, just log once
+            if not hasattr(self, '_realtime_error_logged'):
+                self._statusbar.showMessage(f"Real-time error: {e}", 3000)
+                self._realtime_error_logged = True
+
+    def _on_gpu_stats_updated(self, stats) -> None:
+        """Handle GPU statistics update."""
+        if self._realtime_mode:
+            fps = stats.current_fps
+            dropped = stats.frames_dropped
+            self._statusbar.showMessage(
+                f"FPS: {fps:.1f} | Dropped: {dropped}", 0
+            )
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Handle window close."""
+        # Stop real-time mode first
+        if self._realtime_mode:
+            self._stop_realtime_preview()
+
+        # Shutdown GPU
+        if self._gpu_backend:
+            try:
+                self._gpu_backend.shutdown()
+            except Exception:
+                pass
+
+        # Original close handling
+        if self._modified:
+            result = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                "You have unsaved changes. Do you want to save before closing?",
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel,
+            )
+            if result == QMessageBox.StandardButton.Save:
+                if not self.save_project():
+                    event.ignore()
+                    return
+            elif result == QMessageBox.StandardButton.Cancel:
+                event.ignore()
+                return
+
+        self._save_settings()
+        event.accept()

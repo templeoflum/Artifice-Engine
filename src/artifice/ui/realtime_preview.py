@@ -1,7 +1,8 @@
 """Real-time GPU-accelerated preview widget.
 
-Provides a QOpenGLWidget-based preview that displays GPU textures
-directly without CPU roundtrips.
+Provides a preview that displays GPU-rendered frames.
+For initial testing, frames are downloaded from GPU and displayed via Qt.
+Future versions will use QOpenGLWidget for zero-copy display.
 """
 
 from __future__ import annotations
@@ -10,8 +11,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QSurfaceFormat
-from PySide6.QtOpenGLWidgets import QOpenGLWidget
+from PySide6.QtGui import QImage, QPixmap, QPainter
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QLabel, QHBoxLayout
 
 if TYPE_CHECKING:
@@ -20,11 +20,11 @@ if TYPE_CHECKING:
     from artifice.gpu.texture import Texture
 
 
-class RealtimePreviewWidget(QOpenGLWidget):
-    """GPU-accelerated real-time preview widget.
+class RealtimePreviewWidget(QWidget):
+    """Real-time preview widget.
 
-    Displays frames from the StreamExecutor with minimal latency
-    by rendering GPU textures directly without CPU copies.
+    Displays frames from the StreamExecutor. Currently downloads
+    frames from GPU for display (fast enough for testing).
     """
 
     # Signals
@@ -32,14 +32,6 @@ class RealtimePreviewWidget(QOpenGLWidget):
     frame_rendered = Signal()
 
     def __init__(self, parent: QWidget | None = None):
-        # Set up OpenGL format before creating widget
-        fmt = QSurfaceFormat()
-        fmt.setVersion(4, 3)
-        fmt.setProfile(QSurfaceFormat.OpenGLContextProfile.CoreProfile)
-        fmt.setSwapBehavior(QSurfaceFormat.SwapBehavior.TripleBuffer)
-        fmt.setSwapInterval(1)  # VSync
-        QSurfaceFormat.setDefaultFormat(fmt)
-
         super().__init__(parent)
 
         # GPU resources
@@ -48,11 +40,16 @@ class RealtimePreviewWidget(QOpenGLWidget):
         self._display_texture: Texture | None = None
 
         # Display state
-        self._initialized = False
-        self._needs_redraw = True
+        self._current_pixmap: QPixmap | None = None
+        self._image_label = QLabel()
+        self._image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._image_label.setMinimumSize(320, 240)
+        self._image_label.setStyleSheet("background-color: #1a1a1a;")
 
-        # Fallback image for when no GPU texture
-        self._fallback_image: np.ndarray | None = None
+        # Layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._image_label)
 
         # FPS counter
         self._frame_count = 0
@@ -60,11 +57,6 @@ class RealtimePreviewWidget(QOpenGLWidget):
         self._fps_timer.timeout.connect(self._update_fps)
         self._fps_timer.start(1000)  # Update every second
         self._last_fps = 0.0
-
-        # Refresh timer (backup in case signals don't fire)
-        self._refresh_timer = QTimer(self)
-        self._refresh_timer.timeout.connect(self.update)
-        self._refresh_timer.start(16)  # ~60 FPS baseline
 
     def set_backend(self, backend: GPUBackend) -> None:
         """Set the GPU backend.
@@ -81,7 +73,10 @@ class RealtimePreviewWidget(QOpenGLWidget):
             executor: Stream executor to display frames from
         """
         if self._executor:
-            self._executor.frame_ready.disconnect(self._on_frame_ready)
+            try:
+                self._executor.frame_ready.disconnect(self._on_frame_ready)
+            except RuntimeError:
+                pass
 
         self._executor = executor
         executor.frame_ready.connect(self._on_frame_ready)
@@ -93,27 +88,78 @@ class RealtimePreviewWidget(QOpenGLWidget):
             texture: GPU texture to display
         """
         self._display_texture = texture
-        self._needs_redraw = True
-        self.update()
+        self._display_from_texture(texture)
 
-    def set_fallback_image(self, image: np.ndarray) -> None:
-        """Set a fallback image for when no GPU texture is available.
+    def set_image(self, image: np.ndarray) -> None:
+        """Set a CPU image to display.
 
         Args:
-            image: NumPy array (H, W, C) in [0, 1]
+            image: NumPy array (H, W, C) in [0, 1] or (C, H, W)
         """
-        self._fallback_image = image
-        self._needs_redraw = True
-        self.update()
+        self._display_from_array(image)
 
     @Slot()
     def _on_frame_ready(self) -> None:
         """Handle new frame from executor."""
         if self._executor and self._executor.triple_buffer:
-            self._display_texture = self._executor.triple_buffer.get_display_texture()
-            self._needs_redraw = True
-            self._frame_count += 1
-            self.update()
+            texture = self._executor.triple_buffer.get_display_texture()
+            if texture:
+                self._display_from_texture(texture)
+                self._frame_count += 1
+                self.frame_rendered.emit()
+
+    def _display_from_texture(self, texture: Texture) -> None:
+        """Display a GPU texture (downloads to CPU)."""
+        try:
+            # Download from GPU
+            data = texture.download()
+            self._display_from_array(data)
+        except Exception:
+            pass
+
+    def _display_from_array(self, data: np.ndarray) -> None:
+        """Display a NumPy array."""
+        if data is None:
+            return
+
+        # Handle channel-first format (C, H, W) -> (H, W, C)
+        if data.ndim == 3 and data.shape[0] in (1, 3, 4):
+            data = np.transpose(data, (1, 2, 0))
+
+        # Ensure we have the right shape
+        if data.ndim == 2:
+            data = data[:, :, np.newaxis]
+
+        h, w = data.shape[:2]
+        channels = data.shape[2] if data.ndim == 3 else 1
+
+        # Convert to 8-bit
+        if data.dtype == np.float32 or data.dtype == np.float64:
+            data = (np.clip(data, 0, 1) * 255).astype(np.uint8)
+        elif data.dtype != np.uint8:
+            data = data.astype(np.uint8)
+
+        # Ensure contiguous
+        data = np.ascontiguousarray(data)
+
+        # Create QImage
+        if channels == 1:
+            qimg = QImage(data.data, w, h, w, QImage.Format.Format_Grayscale8)
+        elif channels == 3:
+            qimg = QImage(data.data, w, h, w * 3, QImage.Format.Format_RGB888)
+        elif channels == 4:
+            qimg = QImage(data.data, w, h, w * 4, QImage.Format.Format_RGBA8888)
+        else:
+            return
+
+        # Scale to fit label while maintaining aspect ratio
+        pixmap = QPixmap.fromImage(qimg)
+        scaled = pixmap.scaled(
+            self._image_label.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self._image_label.setPixmap(scaled)
 
     @Slot()
     def _update_fps(self) -> None:
@@ -122,55 +168,15 @@ class RealtimePreviewWidget(QOpenGLWidget):
         self._frame_count = 0
         self.fps_updated.emit(self._last_fps)
 
-    def initializeGL(self) -> None:
-        """Initialize OpenGL resources."""
-        # Note: The backend should be initialized before this widget
-        # We just verify it's ready
-        self._initialized = True
-
-    def resizeGL(self, w: int, h: int) -> None:
-        """Handle resize."""
-        if self._backend and self._backend.is_initialized:
-            # Update viewport will be handled in paintGL
-            pass
-
-    def paintGL(self) -> None:
-        """Render the current frame."""
-        if not self._initialized:
-            return
-
-        if not self._backend or not self._backend.is_initialized:
-            # Fall back to basic clear
-            from OpenGL.GL import glClearColor, glClear, GL_COLOR_BUFFER_BIT
-            glClearColor(0.1, 0.1, 0.1, 1.0)
-            glClear(GL_COLOR_BUFFER_BIT)
-            return
-
-        # Get display texture from executor if available
-        if self._executor and self._executor.triple_buffer:
-            self._display_texture = self._executor.triple_buffer.get_display_texture()
-
-        if self._display_texture:
-            # Render texture to screen
-            viewport = (0, 0, self.width(), self.height())
-            self._backend.blit_to_screen(
-                self._display_texture,
-                self._backend.get_blit_program(),
-                viewport,
-            )
-        else:
-            # Clear to dark gray
-            from OpenGL.GL import glClearColor, glClear, GL_COLOR_BUFFER_BIT
-            glClearColor(0.1, 0.1, 0.1, 1.0)
-            glClear(GL_COLOR_BUFFER_BIT)
-
-        self._needs_redraw = False
-        self.frame_rendered.emit()
-
     @property
     def fps(self) -> float:
         """Return current FPS."""
         return self._last_fps
+
+    def resizeEvent(self, event) -> None:
+        """Handle resize - rescale current image."""
+        super().resizeEvent(event)
+        # Pixmap will be rescaled on next frame
 
 
 class RealtimePreviewPanel(QWidget):
@@ -181,7 +187,6 @@ class RealtimePreviewPanel(QWidget):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -239,97 +244,9 @@ class RealtimePreviewPanel(QWidget):
         Args:
             stats: Executor statistics
         """
-        # FPS is updated via signal, but we can show more stats here
         pass
 
     @property
     def preview_widget(self) -> RealtimePreviewWidget:
         """Return the preview widget."""
         return self._preview
-
-
-class FallbackPreviewWidget(QWidget):
-    """Fallback preview for when OpenGL is not available.
-
-    Uses standard Qt painting instead of OpenGL.
-    """
-
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
-        self._image: np.ndarray | None = None
-
-        self.setMinimumSize(320, 240)
-        self.setStyleSheet("background-color: #1a1a1a;")
-
-    def set_image(self, image: np.ndarray) -> None:
-        """Set image to display.
-
-        Args:
-            image: NumPy array (H, W, C) in [0, 1]
-        """
-        self._image = image
-        self.update()
-
-    def paintEvent(self, event) -> None:
-        """Paint the image."""
-        from PySide6.QtGui import QPainter, QImage, QPixmap
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-        if self._image is not None:
-            # Convert to QImage
-            h, w = self._image.shape[:2]
-            channels = self._image.shape[2] if self._image.ndim == 3 else 1
-
-            # Convert to 8-bit RGB
-            img_8bit = (self._image * 255).astype(np.uint8)
-
-            if channels == 1:
-                # Grayscale
-                qimg = QImage(
-                    img_8bit.tobytes(),
-                    w, h,
-                    w,
-                    QImage.Format.Format_Grayscale8,
-                )
-            elif channels == 3:
-                # RGB
-                qimg = QImage(
-                    img_8bit.tobytes(),
-                    w, h,
-                    w * 3,
-                    QImage.Format.Format_RGB888,
-                )
-            else:
-                # RGBA
-                qimg = QImage(
-                    img_8bit.tobytes(),
-                    w, h,
-                    w * 4,
-                    QImage.Format.Format_RGBA8888,
-                )
-
-            # Scale to fit widget
-            pixmap = QPixmap.fromImage(qimg)
-            scaled = pixmap.scaled(
-                self.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-
-            # Center in widget
-            x = (self.width() - scaled.width()) // 2
-            y = (self.height() - scaled.height()) // 2
-            painter.drawPixmap(x, y, scaled)
-        else:
-            # No image - draw placeholder
-            painter.fillRect(self.rect(), Qt.GlobalColor.darkGray)
-            painter.setPen(Qt.GlobalColor.gray)
-            painter.drawText(
-                self.rect(),
-                Qt.AlignmentFlag.AlignCenter,
-                "No preview available",
-            )
-
-        painter.end()
